@@ -181,4 +181,25 @@ describe("Minor Hotels Mock API Tests", () => {
       expect(res.body.error.code).toBe("NOT_FOUND");
     });
   });
+
+  // -------------------------------------------------------------
+  // SWAGGER UI ENDPOINTS
+  // -------------------------------------------------------------
+  describe("Swagger UI Endpoints", () => {
+    it("should redirect or serve 200 with HTML for /swagger/", async () => {
+      const res = await request(app).get("/swagger/");
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toContain("text/html");
+      expect(res.text).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css");
+      expect(res.text).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js");
+      expect(res.text).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js");
+    });
+
+    it("should redirect or serve 200 with HTML for /api-docs/", async () => {
+      const res = await request(app).get("/api-docs/");
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toContain("text/html");
+      expect(res.text).toContain("https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css");
+    });
+  });
 });

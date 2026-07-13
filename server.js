@@ -37,8 +37,15 @@ try {
 
 // Serve Swagger UI
 if (swaggerDocument) {
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-  app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  const swaggerOptions = {
+    customCssUrl: "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+    customJs: [
+      "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+      "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"
+    ]
+  };
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
+  app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
   console.log(`Swagger UI is available at http://localhost:${PORT}/swagger and http://localhost:${PORT}/api-docs`);
 }
 
