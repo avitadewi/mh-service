@@ -1,6 +1,6 @@
 // Mock database for Minor Hotels Content Composition API (cch-content-service)
 // Supports localization in 'en' and 'th' (Thai)
-// Programmatically expanded to contain exactly 50 properties
+// Programmatically expanded to contain exactly 50 properties with random Picsum images
 
 const mockData = {
   en: {
@@ -79,7 +79,7 @@ const mockData = {
           containerType: "HERO",
           background: {
             type: "image",
-            value: "https://picsum.photos/seed/minor-hero/1920/1080",
+            value: "https://picsum.photos/1920/1080?random=hero",
             themeMode: "dark"
           },
           data: {
@@ -104,19 +104,19 @@ const mockData = {
               {
                 label: "Phuket",
                 propertyCount: "12 Properties",
-                imageUrl: "https://picsum.photos/seed/dest-phuket/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-phuket",
                 action: { type: "SEARCH", target: "/search", params: { cityCode: "HKT", countryCode: "TH" } }
               },
               {
                 label: "Bangkok",
                 propertyCount: "8 Properties",
-                imageUrl: "https://picsum.photos/seed/dest-bangkok/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-bangkok",
                 action: { type: "SEARCH", target: "/search", params: { cityCode: "BKK", countryCode: "TH" } }
               },
               {
                 label: "Maldives",
                 propertyCount: "5 Properties",
-                imageUrl: "https://picsum.photos/seed/dest-maldives/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-maldives",
                 action: { type: "SEARCH", target: "/search", params: { regionName: "Maldives" } }
               }
             ]
@@ -137,7 +137,7 @@ const mockData = {
                 brandName: "Anantara Resorts & Hotels",
                 description: "Indigenous luxury experiences deeply connected to each destination.",
                 logoUrl: "https://cdn.example.com/brands/anantara.svg",
-                backgroundImageUrl: "https://picsum.photos/seed/brand-anantara/1200/600",
+                backgroundImageUrl: "https://picsum.photos/1200/600?random=brand-anantara",
                 ctaLabel: "Explore Anantara",
                 action: { type: "BRAND_PAGE", target: "/brands/anantara" }
               },
@@ -145,7 +145,7 @@ const mockData = {
                 brandName: "Avani Hotels & Resorts",
                 description: "Modern, vibrant, and essential spaces designed for smart travelers.",
                 logoUrl: "https://cdn.example.com/brands/avani.svg",
-                backgroundImageUrl: "https://picsum.photos/seed/brand-avani/1200/600",
+                backgroundImageUrl: "https://picsum.photos/1200/600?random=brand-avani",
                 ctaLabel: "Explore Avani",
                 action: { type: "BRAND_PAGE", target: "/brands/avani" }
               }
@@ -288,7 +288,7 @@ const mockData = {
           containerType: "HERO",
           background: {
             type: "image",
-            value: "https://picsum.photos/seed/minor-hero/1920/1080",
+            value: "https://picsum.photos/1920/1080?random=hero-th",
             themeMode: "dark"
           },
           data: {
@@ -313,19 +313,19 @@ const mockData = {
               {
                 label: "ภูเก็ต",
                 propertyCount: "12 โรงแรม",
-                imageUrl: "https://picsum.photos/seed/dest-phuket/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-phuket-th",
                 action: { type: "SEARCH", target: "/search", params: { cityCode: "HKT", countryCode: "TH" } }
               },
               {
                 label: "กรุงเทพฯ",
                 propertyCount: "8 โรงแรม",
-                imageUrl: "https://picsum.photos/seed/dest-bangkok/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-bangkok-th",
                 action: { type: "SEARCH", target: "/search", params: { cityCode: "BKK", countryCode: "TH" } }
               },
               {
                 label: "มัลดีฟส์",
                 propertyCount: "5 โรงแรม",
-                imageUrl: "https://picsum.photos/seed/dest-maldives/600/400",
+                imageUrl: "https://picsum.photos/600/400?random=dest-maldives-th",
                 action: { type: "SEARCH", target: "/search", params: { regionName: "Maldives" } }
               }
             ]
@@ -346,7 +346,7 @@ const mockData = {
                 brandName: "อนันตรา รีสอร์ท แอนด์ โฮเทลส์",
                 description: "สัมผัสความหรูหราแบบท้องถิ่นที่เชื่อมโยงคุณเข้ากับเสน่ห์ของแต่ละจุดหมายปลายทาง",
                 logoUrl: "https://cdn.example.com/brands/anantara.svg",
-                backgroundImageUrl: "https://picsum.photos/seed/brand-anantara/1200/600",
+                backgroundImageUrl: "https://picsum.photos/1200/600?random=brand-anantara-th",
                 ctaLabel: "สำรวจอนันตรา",
                 action: { type: "BRAND_PAGE", target: "/brands/anantara" }
               },
@@ -354,7 +354,7 @@ const mockData = {
                 brandName: "อวานี โฮเทลส์ แอนด์ รีสอร์ท",
                 description: "พื้นที่ทันสมัย มีชีวิตชีวา และลงตัว ออกแบบมาเพื่อนักเดินทางที่ชาญฉลาด",
                 logoUrl: "https://cdn.example.com/brands/avani.svg",
-                backgroundImageUrl: "https://picsum.photos/seed/brand-avani/1200/600",
+                backgroundImageUrl: "https://picsum.photos/1200/600?random=brand-avani-th",
                 ctaLabel: "สำรวจอวานี",
                 action: { type: "BRAND_PAGE", target: "/brands/avani" }
               }
@@ -448,15 +448,15 @@ const propertyCatalog = {
     tripadvisorReviewCount: 248,
     hotelStars: 5,
     brandIcon: { domain: "cdn.example.com", path: "/brands/anantara.svg" },
-    thumbnailUrl: "https://picsum.photos/seed/prop-AN-TH-004/800/600",
+    thumbnailUrl: "https://picsum.photos/800/600?random=prop-AN-TH-004",
     overview: {
       shortDescription: "An all-villa sanctuary surrounded by emerald limestone cliffs, turquoise waters and lush jungle.",
       fullDescription: "At Anantara, we believe that every journey should live long in the memory. This all-villa sanctuary offers an intimate escape into nature, surrounded by emerald limestone cliffs, turquoise waters and lush jungle."
     },
     media: {
       gallery: [
-        { id: "property-image-1", url: "https://picsum.photos/seed/prop-AN-TH-004-gal1/800/600", thumbnailUrl: "https://picsum.photos/seed/prop-AN-TH-004-gal1-thumb/400/300", altText: "Resort outdoor lounge", sortOrder: 1 },
-        { id: "property-image-2", url: "https://picsum.photos/seed/prop-AN-TH-004-gal2/800/600", thumbnailUrl: "https://picsum.photos/seed/prop-AN-TH-004-gal2-thumb/400/300", altText: "Luxury beach villa", sortOrder: 2 }
+        { id: "property-image-1", url: "https://picsum.photos/800/600?random=prop-AN-TH-004-gal1", thumbnailUrl: "https://picsum.photos/400/300?random=prop-AN-TH-004-gal1-t", altText: "Resort outdoor lounge", sortOrder: 1 },
+        { id: "property-image-2", url: "https://picsum.photos/800/600?random=prop-AN-TH-004-gal2", thumbnailUrl: "https://picsum.photos/400/300?random=prop-AN-TH-004-gal2-t", altText: "Luxury beach villa", sortOrder: 2 }
       ],
       view360Url: "https://cdn.example.com/properties/AN-TH-004/360view.html"
     },
@@ -505,7 +505,7 @@ const propertyCatalog = {
         amenities: [{ code: "WIFI", label: "Free High-Speed Wi-Fi", icon: "wifi" }],
         bathroomAmenities: [{ code: "ORGANIC_TOILETRIES", label: "Organic Luxury Toiletries", icon: "spa" }],
         media: {
-          gallery: [{ id: "room-image-1", url: "https://picsum.photos/seed/prop-AN-TH-004-room/800/600", thumbnailUrl: "https://picsum.photos/seed/prop-AN-TH-004-room-thumb/400/300", altText: "Villa bedroom", sortOrder: 1 }]
+          gallery: [{ id: "room-image-1", url: "https://picsum.photos/800/600?random=prop-AN-TH-004-room", thumbnailUrl: "https://picsum.photos/400/300?random=prop-AN-TH-004-room-t", altText: "Villa bedroom", sortOrder: 1 }]
         },
         fromPrice: { amount: 12040, currency: "THB", numberOfNights: 1 },
         rateGroups: [
@@ -544,14 +544,14 @@ const propertyCatalog = {
     tripadvisorReviewCount: 1250,
     hotelStars: 5,
     brandIcon: { domain: "cdn.example.com", path: "/brands/avani.svg" },
-    thumbnailUrl: "https://picsum.photos/seed/prop-AV-TH-001/800/600",
+    thumbnailUrl: "https://picsum.photos/800/600?random=prop-AV-TH-001",
     overview: {
       shortDescription: "A chic, stylish riverside hotel rising above the Chao Phraya River, featuring stunning rooftop views.",
       fullDescription: "Soaring high above the River of Kings, Avani+ Riverside Bangkok Hotel combines contemporary style with incredible vistas."
     },
     media: {
       gallery: [
-        { id: "property-image-1", url: "https://picsum.photos/seed/prop-AV-TH-001-gal1/800/600", thumbnailUrl: "https://picsum.photos/seed/prop-AV-TH-001-gal1-thumb/400/300", altText: "Rooftop infinity pool skyline view", sortOrder: 1 }
+        { id: "property-image-1", url: "https://picsum.photos/800/600?random=prop-AV-TH-001-gal1", thumbnailUrl: "https://picsum.photos/400/300?random=prop-AV-TH-001-gal1-t", altText: "Rooftop infinity pool skyline view", sortOrder: 1 }
       ],
       view360Url: "https://cdn.example.com/properties/AV-TH-001/360view.html"
     },
@@ -594,7 +594,7 @@ const propertyCatalog = {
         amenities: [{ code: "WIFI", label: "Free High-Speed Wi-Fi", icon: "wifi" }],
         bathroomAmenities: [{ code: "AVANI_TOILETRIES", label: "Avani Bath Products", icon: "bath" }],
         media: {
-          gallery: [{ id: "room-image-1", url: "https://picsum.photos/seed/prop-AV-TH-001-room/800/600", thumbnailUrl: "https://picsum.photos/seed/prop-AV-TH-001-room-thumb/400/300", altText: "River view bedroom", sortOrder: 1 }]
+          gallery: [{ id: "room-image-1", url: "https://picsum.photos/800/600?random=prop-AV-TH-001-room", thumbnailUrl: "https://picsum.photos/400/300?random=prop-AV-TH-001-room-t", altText: "River view bedroom", sortOrder: 1 }]
         },
         fromPrice: { amount: 4500, currency: "THB", numberOfNights: 1 },
         rateGroups: [
@@ -693,15 +693,15 @@ while (Object.keys(propertyCatalog).length < 50) {
     tripadvisorReviewCount: reviewCount,
     hotelStars: stars,
     brandIcon: { domain: brand.domain, path: brand.path },
-    thumbnailUrl: `https://picsum.photos/seed/prop-${propertyCode}/800/600`,
+    thumbnailUrl: `https://picsum.photos/800/600?random=${generatedIndex}_thumb`,
     overview: {
       shortDescription: `A premium hotel of the ${brand.name} collection located in the beautiful surroundings of ${loc.city}.`,
       fullDescription: `Welcome to ${title}. Experience top-tier accommodation by ${brand.name}, featuring modern high-end finishes, scenic city/resort views, and signature culinary spots designed to elevate your stay in ${loc.city}.`
     },
     media: {
       gallery: [
-        { id: "img-1", url: `https://picsum.photos/seed/prop-${propertyCode}-gal1/800/600`, thumbnailUrl: `https://picsum.photos/seed/prop-${propertyCode}-gal1-thumb/400/300`, altText: "Exterior view", sortOrder: 1 },
-        { id: "img-2", url: `https://picsum.photos/seed/prop-${propertyCode}-gal2/800/600`, thumbnailUrl: `https://picsum.photos/seed/prop-${propertyCode}-gal2-thumb/400/300`, altText: "Restaurant scene", sortOrder: 2 }
+        { id: "img-1", url: `https://picsum.photos/800/600?random=${generatedIndex}_gal1`, thumbnailUrl: `https://picsum.photos/400/300?random=${generatedIndex}_gal1_t`, altText: "Exterior view", sortOrder: 1 },
+        { id: "img-2", url: `https://picsum.photos/800/600?random=${generatedIndex}_gal2`, thumbnailUrl: `https://picsum.photos/400/300?random=${generatedIndex}_gal2_t`, altText: "Restaurant scene", sortOrder: 2 }
       ],
       view360Url: `https://cdn.example.com/properties/${propertyCode}/360view.html`
     },
@@ -751,7 +751,7 @@ while (Object.keys(propertyCatalog).length < 50) {
         amenities: [],
         bathroomAmenities: [],
         media: {
-          gallery: [{ id: "room-1", url: `https://picsum.photos/seed/prop-${propertyCode}-room/800/600`, thumbnailUrl: `https://picsum.photos/seed/prop-${propertyCode}-room-thumb/400/300`, altText: "Bed area", sortOrder: 1 }]
+          gallery: [{ id: "room-1", url: `https://picsum.photos/800/600?random=${generatedIndex}_room`, thumbnailUrl: `https://picsum.photos/400/300?random=${generatedIndex}_room_t`, altText: "Bed area", sortOrder: 1 }]
         },
         fromPrice: { amount: basePrice, currency: "THB", numberOfNights: 1 },
         rateGroups: [

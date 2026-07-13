@@ -218,6 +218,17 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     );
   }
 
+  // Parse pagination parameters (hardcoded default limit of 10 as requested)
+  const limit = 10;
+  let page = 1;
+  if (nextCursor) {
+    const match = nextCursor.match(/cursor-page-(\d+)/);
+    if (match) {
+      page = parseInt(match[1], 10);
+    }
+  }
+  const offset = (page - 1) * limit;
+
   // Convert catalog to property-list array with list-specific formats
   let results = Object.values(propertyCatalog).map(prop => {
     // Generate standard pricePerNight dynamically based on catalog or default to a reasonable value
@@ -254,10 +265,10 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
 
   if (countryCode) {
     const countryLower = countryCode.toLowerCase();
-    // For our mock data, both are TH (Thailand)
-    if (countryLower !== "th") {
-      results = [];
-    }
+    results = results.filter(p => {
+      const parentProp = propertyCatalog[p.propertyCode];
+      return parentProp && parentProp.countryCode.toLowerCase() === countryLower;
+    });
   }
 
   // Apply sorting
@@ -269,12 +280,18 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     results.sort((a, b) => b.tripadvisorReviewScore - a.tripadvisorReviewScore);
   }
 
+  // Apply slice-based pagination with page name format cursor
+  const totalResults = results.length;
+  const paginatedProperties = results.slice(offset, offset + limit);
+  const hasMore = (offset + limit) < totalResults;
+  const nextCursorValue = hasMore ? `cursor-page-${page + 1}` : null;
+
   res.json({
     data: {
       pagination: {
-        nextCursor: null // Single page response for simplicity
+        nextCursor: nextCursorValue
       },
-      properties: results
+      properties: paginatedProperties
     }
   });
 });

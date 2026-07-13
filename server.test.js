@@ -103,10 +103,10 @@ describe("Minor Hotels Mock API Tests", () => {
     it("should return autocomplete suggestions for a valid query", async () => {
       const res = await request(app).get("/content/v1/destination-search?q=phuket");
       expect(res.status).toBe(200);
-      expect(res.body.data.destinations.length).toBe(1);
+      expect(res.body.data.destinations.length).toBeGreaterThanOrEqual(1);
       expect(res.body.data.destinations[0].title).toBe("Phuket");
-      expect(res.body.data.properties.length).toBe(1);
-      expect(res.body.data.properties[0].title).toBe("Anantara Koh Yao Yai Resort & Villas");
+      expect(res.body.data.properties.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data.properties[0].cityName).toBe("Phuket");
     });
   });
 
@@ -118,13 +118,32 @@ describe("Minor Hotels Mock API Tests", () => {
       expect(res.body.error.message).toContain("Missing required query parameters");
     });
 
-    it("should return property listings when all parameters are provided", async () => {
+    it("should return property listings matching the default limit of 10 and return nextCursor as cursor-page-2", async () => {
       const res = await request(app).get(
         "/content/v1/properties/property-list-search?from=2026-07-20&to=2026-07-25&rooms=1&adults=2&children=0&infants=0"
       );
       expect(res.status).toBe(200);
-      expect(res.body.data.properties.length).toBe(2);
+      expect(res.body.data.properties.length).toBe(10); // Default limit is 10
+      expect(res.body.data.pagination.nextCursor).toBe("cursor-page-2"); // Next cursor page
       expect(res.body.data.properties[0].pricePerNight).toBeDefined();
+    });
+
+    it("should fetch the second page when passing nextCursor=cursor-page-2 and return nextCursor as cursor-page-3", async () => {
+      const res = await request(app).get(
+        "/content/v1/properties/property-list-search?from=2026-07-20&to=2026-07-25&rooms=1&adults=2&children=0&infants=0&nextCursor=cursor-page-2"
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.data.properties.length).toBe(10);
+      expect(res.body.data.pagination.nextCursor).toBe("cursor-page-3");
+    });
+
+    it("should fetch the fifth page (final page) and return nextCursor as null", async () => {
+      const res = await request(app).get(
+        "/content/v1/properties/property-list-search?from=2026-07-20&to=2026-07-25&rooms=1&adults=2&children=0&infants=0&nextCursor=cursor-page-5"
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.data.properties.length).toBe(10); // 40 to 49
+      expect(res.body.data.pagination.nextCursor).toBeNull(); // Last page reached
     });
 
     it("should support filtering by cityCode HKT (Phuket)", async () => {
@@ -132,7 +151,7 @@ describe("Minor Hotels Mock API Tests", () => {
         "/content/v1/properties/property-list-search?from=2026-07-20&to=2026-07-25&rooms=1&adults=2&children=0&infants=0&cityCode=HKT"
       );
       expect(res.status).toBe(200);
-      expect(res.body.data.properties.length).toBe(1);
+      expect(res.body.data.properties.length).toBeGreaterThanOrEqual(1);
       expect(res.body.data.properties[0].cityName).toBe("Phuket");
     });
 
@@ -141,7 +160,6 @@ describe("Minor Hotels Mock API Tests", () => {
         "/content/v1/properties/property-list-search?from=2026-07-20&to=2026-07-25&rooms=1&adults=2&children=0&infants=0&sort=price-low-to-high"
       );
       expect(res.status).toBe(200);
-      expect(res.body.data.properties.length).toBe(2);
       const firstPrice = res.body.data.properties[0].pricePerNight;
       const secondPrice = res.body.data.properties[1].pricePerNight;
       expect(firstPrice).toBeLessThanOrEqual(secondPrice);
