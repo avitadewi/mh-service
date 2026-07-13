@@ -21,7 +21,14 @@ app.use((req, res, next) => {
 // Load OpenAPI YAML specification
 let swaggerDocument;
 try {
-  const openapiPath = path.join(__dirname, "openapi.yaml");
+  const fs = require("fs");
+  let openapiPath = path.join(process.cwd(), "openapi.yaml");
+  if (!fs.existsSync(openapiPath)) {
+    openapiPath = path.join(__dirname, "openapi.yaml");
+  }
+  if (!fs.existsSync(openapiPath)) {
+    openapiPath = path.join(__dirname, "..", "openapi.yaml");
+  }
   swaggerDocument = yaml.load(openapiPath);
   console.log("Successfully loaded OpenAPI YAML file.");
 } catch (error) {
