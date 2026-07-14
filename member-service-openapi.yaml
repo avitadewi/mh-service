@@ -1,0 +1,757 @@
+openapi: 3.0.3
+info:
+  title: CCH GHA Authentication API
+  version: 0.4.0
+  license:
+    name: Proprietary
+  description: >
+    GHA-backed login, profile retrieval, registration, enrollment reference data,
+    and stateless token refresh.
+    CCH signs claims as an EdDSA/Ed25519 JWS and encrypts the compact JWS as a JWE
+    using dir + A256GCM. Public responses never expose gha_profile_id, GHA
+    credentials, GHA tokens, or raw vendor payloads. Canonical profile responses may
+    contain lastName.
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host:
+        default: cch.example.internal
+
+tags:
+  - name: GHA Authentication
+    description: GHA-backed identity proof, profile retrieval, enrollment, and CCH token refresh.
+  - name: GHA Enrollment Reference Data
+    description: Cacheable canonical language, country, and state values used by enrollment forms.
+
+paths:
+  /gha/auth/login:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    post:
+      tags: [GHA Authentication]
+      summary: Authenticate a GHA member and issue a CCH token pair
+      operationId: loginGhaMember
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Channel'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Pragma: { $ref: '#/components/headers/NoCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+  /gha/auth/profile:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      tags: [GHA Authentication]
+      summary: Return the current sanitized GHA member profile
+      description: >
+        Decrypts the outer JWE, verifies the inner EdDSA JWS, validates the access-token
+        claims, and calls GHA /getProfile with the protected gha_profile_id and last_name.
+      operationId: getGhaProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Current member profile
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/PrivateNoStore' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+        '401': { $ref: '#/components/responses/InvalidToken' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+  /gha/auth/refresh:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    post:
+      tags: [GHA Authentication]
+      summary: Validate a refresh token and issue a new token pair
+      description: >
+        Decrypts the JWE, verifies the inner EdDSA signature, and validates exp,
+        session_exp, issuer, audience, token purpose, channel, and identity claims.
+        Refresh is stateless; replay detection and revocation are not available.
+      operationId: refreshGhaSession
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair issued
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Pragma: { $ref: '#/components/headers/NoCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/InvalidToken' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /gha/languages:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      tags: [GHA Enrollment Reference Data]
+      summary: Return GHA enrollment languages
+      operationId: listGhaLanguages
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Canonical GHA language values
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/ReferenceCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReferenceDataResponse' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+  /gha/countries:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      tags: [GHA Enrollment Reference Data]
+      summary: Return GHA enrollment countries
+      operationId: listGhaCountries
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Canonical GHA country values
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/ReferenceCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReferenceDataResponse' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+  /gha/states:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      tags: [GHA Enrollment Reference Data]
+      summary: Return GHA enrollment states for a country
+      operationId: listGhaStates
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CountryCode'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Canonical GHA state values; items is empty when none are configured
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/ReferenceCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReferenceDataResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+  /gha/auth/register:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
+    post:
+      tags: [GHA Authentication]
+      summary: Enroll a new GHA member and issue a CCH token pair
+      operationId: registerGhaMember
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Channel'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: GHA member created and token pair issued without a member object
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+            Pragma: { $ref: '#/components/headers/NoCache' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '409':
+          description: Existing GHA account or idempotency conflict
+          headers:
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                accountExists:
+                  value:
+                    code: ACCOUNT_ALREADY_EXISTS
+                    message: An account may already exist. Sign in or reset the password.
+                    correlationId: 01JEXAMPLE
+                idempotencyConflict:
+                  value:
+                    code: IDEMPOTENCY_CONFLICT
+                    message: The idempotency key cannot be used for this request.
+                    correlationId: 01JEXAMPLE
+        '422': { $ref: '#/components/responses/ConsentRequired' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/GhaUnavailable' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Nested compact JWS (EdDSA) inside compact JWE (dir + A256GCM)
+
+  parameters:
+    Channel:
+      name: X-CCH-Channel
+      in: header
+      required: true
+      description: Selects the approved web or mobile token lifetime policy.
+      schema:
+        type: string
+        enum: [web, mobile]
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Unique key for this submit (16–128 characters). Reuse the same value when retrying the same request after a network error.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: >-
+        Canonical operational correlation identifier. Exactly one valid value is
+        accepted. A present invalid canonical value never falls back to legacy;
+        when both headers are present they must contain one equal valid value.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+    CountryCode:
+      name: countryCode
+      in: query
+      required: true
+      description: Country code selected from GET /api/v1/gha/countries.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 2
+        pattern: '^[A-Z]{2}$'
+
+    LegacyRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      deprecated: true
+      description: >-
+        Migration-only alias accepted when the canonical header is absent.
+        If both headers are present, they must be one equal valid value.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+  headers:
+    NoStore:
+      description: Token responses are not cacheable.
+      schema:
+        type: string
+        enum: [no-store]
+    PrivateNoStore:
+      description: Member responses are private and not cacheable.
+      schema:
+        type: string
+        enum: ['private, no-store']
+    NoCache:
+      description: Legacy cache prevention for token responses.
+      schema:
+        type: string
+        enum: [no-cache]
+    ReferenceCache:
+      description: Reference data may be cached, but must be refreshed within one month.
+      schema:
+        type: string
+        enum: ['public, max-age=86400']
+    CorrelationId:
+      description: >-
+        Canonical operational correlation identifier selected or generated for
+        this request. It is distinct from the W3C trace identifier.
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+
+    LegacyRequestId:
+      description: Deprecated response alias with the same value as X-Correlation-ID.
+      required: true
+      deprecated: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+  schemas:
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [login, password]
+      properties:
+        login:
+          type: string
+          minLength: 1
+          maxLength: 254
+          description: GHA username or email address.
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          format: password
+          writeOnly: true
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, firstName, lastName, language, ghaMarketingYn, consentFlags]
+      description: >
+        Native-name fields must be supplied together. China-applicable requests must
+        accept the China Addendum. These cross-field rules are enforced by the
+        generated server implementation and domain validation.
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 50
+          pattern: '^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9 ])[\x21-\x7E](?:[\x20-\x7E]*[\x21-\x7E])?$'
+          format: password
+          writeOnly: true
+          description: Must contain at least one ASCII letter, one number, and one symbol, with no leading or trailing spaces.
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z][A-Za-z .''-]*$'
+          description: International/English spelling accepted by GHA.
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z][A-Za-z .''-]*$'
+          description: International/English spelling sent to GHA and protected in the issued token.
+        nativeFirstName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nativeLastName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nativeLanguage:
+          type: string
+          minLength: 1
+          maxLength: 10
+          description: Required together with nativeFirstName and nativeLastName.
+        language:
+          type: string
+          minLength: 1
+          maxLength: 10
+          description: GHA language code selected from GET /api/v1/gha/languages.
+        birthday:
+          type: string
+          format: date
+        chinaResident:
+          type: boolean
+          description: Self-identification used only to enforce China Addendum acceptance; not forwarded to GHA.
+        phone:
+          type: object
+          additionalProperties: false
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [MOBILE, HOME, BUSINESS]
+            number:
+              type: string
+              minLength: 1
+              maxLength: 50
+        address:
+          type: object
+          additionalProperties: false
+          required: [type, city, country]
+          properties:
+            type:
+              type: string
+              enum: [HOME, BUSINESS]
+            address1:
+              type: string
+              maxLength: 200
+            address2:
+              type: string
+              maxLength: 200
+            city:
+              type: string
+              minLength: 1
+              maxLength: 200
+            state:
+              type: string
+              maxLength: 10
+              description: State code selected from GET /api/v1/gha/states when available.
+            country:
+              type: string
+              minLength: 2
+              maxLength: 2
+              pattern: '^[A-Z]{2}$'
+              description: Country code selected from GET /api/v1/gha/countries.
+            zipCode:
+              type: string
+              maxLength: 30
+            company:
+              type: string
+              maxLength: 200
+        ghaMarketingYn:
+          type: boolean
+          description: GHA marketing choice; true is opt-in and false is opt-out.
+        consentFlags:
+          type: object
+          additionalProperties: false
+          required: [termsAccepted, privacyAccepted]
+          properties:
+            termsAccepted:
+              type: boolean
+              enum: [true]
+            privacyAccepted:
+              type: boolean
+              enum: [true]
+            chinaAddendumAccepted:
+              type: boolean
+              description: Must be true for a China IP address or self-identified Chinese resident.
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 16384
+          writeOnly: true
+
+    AuthResponse:
+      type: object
+      additionalProperties: false
+      required: [accessToken, refreshToken, tokenType, accessExpiresIn, refreshExpiresIn, member]
+      properties:
+        accessToken:
+          type: string
+          description: Signed EdDSA JWS encrypted as a dir + A256GCM JWE.
+        refreshToken:
+          type: string
+          description: Signed EdDSA JWS encrypted as a dir + A256GCM JWE.
+        tokenType:
+          type: string
+          enum: [Bearer]
+        accessExpiresIn:
+          type: integer
+          minimum: 1
+        refreshExpiresIn:
+          type: integer
+          minimum: 1
+        member:
+          $ref: '#/components/schemas/Member'
+
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [accessToken, refreshToken, tokenType, accessExpiresIn, refreshExpiresIn]
+      properties:
+        accessToken:
+          type: string
+          description: Signed EdDSA JWS encrypted as a dir + A256GCM JWE.
+        refreshToken:
+          type: string
+          description: Signed EdDSA JWS encrypted as a dir + A256GCM JWE.
+        tokenType:
+          type: string
+          enum: [Bearer]
+        accessExpiresIn:
+          type: integer
+          minimum: 1
+          description: Seconds until access-token expiry.
+        refreshExpiresIn:
+          type: integer
+          minimum: 1
+          description: Seconds until refresh-token expiry, bounded by absolute session expiry.
+
+    MemberResponse:
+      type: object
+      additionalProperties: false
+      required: [member]
+      properties:
+        member:
+          $ref: '#/components/schemas/Member'
+
+    Member:
+      type: object
+      additionalProperties: false
+      required:
+        - firstName
+        - lastName
+        - membershipCardNo
+        - membershipLevel
+        - discoveryBalance
+        - effectiveDate
+        - expirationDate
+      description: Sanitized canonical member data; never a raw GHA payload.
+      properties:
+        firstName:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: GHA profile first name.
+        lastName:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: GHA profile last name; PII that must not be logged.
+        membershipCardNo:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Card number from the primary DISCOVERY membership; may be alphanumeric.
+        membershipLevel:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Current level from the primary DISCOVERY membership.
+        discoveryBalance:
+          type: number
+          nullable: true
+          format: double
+          minimum: 0
+          description: Available DISCOVERY Dollar balance from GHA GRAVTY data.
+        effectiveDate:
+          type: integer
+          nullable: true
+          format: int64
+          minimum: 0
+          description: Primary DISCOVERY membership effective date as Unix seconds.
+        expirationDate:
+          type: integer
+          nullable: true
+          format: int64
+          minimum: 0
+          description: Primary DISCOVERY membership-level expiration date as Unix seconds.
+
+    ReferenceDataResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferenceDataItem'
+
+    ReferenceDataItem:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - INVALID_CREDENTIALS
+            - INVALID_TOKEN
+            - ACCOUNT_ALREADY_EXISTS
+            - IDEMPOTENCY_CONFLICT
+            - CONSENT_REQUIRED
+            - RATE_LIMITED
+            - GHA_UNAVAILABLE
+            - SERVICE_UNAVAILABLE
+        message:
+          type: string
+        correlationId:
+          type: string
+
+  responses:
+    InvalidRequest:
+      description: Invalid request
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: INVALID_REQUEST
+            message: The request could not be processed.
+            correlationId: 01JEXAMPLE
+    InvalidCredentials:
+      description: Invalid login or password; response is intentionally non-enumerating
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: INVALID_CREDENTIALS
+            message: The login or password is invalid.
+            correlationId: 01JEXAMPLE
+    InvalidToken:
+      description: Token is invalid, expired, unsupported, or has the wrong purpose
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        WWW-Authenticate:
+          description: Bearer challenge
+          schema:
+            type: string
+            enum: ['Bearer error="invalid_token"']
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: INVALID_TOKEN
+            message: The authentication token is invalid or expired.
+            correlationId: 01JEXAMPLE
+    ConsentRequired:
+      description: Required enrollment acceptance is missing
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: CONSENT_REQUIRED
+            message: Required enrollment acceptance is missing.
+            correlationId: 01JEXAMPLE
+    RateLimited:
+      description: Authentication rate limit exceeded
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        Retry-After:
+          description: Seconds until another attempt may be made.
+          schema:
+            type: integer
+            minimum: 1
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: RATE_LIMITED
+            message: Too many requests. Try again later.
+            correlationId: 01JEXAMPLE
+    GhaUnavailable:
+      description: GHA is temporarily unavailable
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        Retry-After:
+          description: Optional retry delay in seconds.
+          schema:
+            type: integer
+            minimum: 1
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: GHA_UNAVAILABLE
+            message: Authentication is temporarily unavailable.
+            correlationId: 01JEXAMPLE
+    ServiceUnavailable:
+      description: Token service is temporarily unavailable
+      headers:
+        X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+        X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: SERVICE_UNAVAILABLE
+            message: Authentication is temporarily unavailable.
+            correlationId: 01JEXAMPLE

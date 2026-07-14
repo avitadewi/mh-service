@@ -1,0 +1,1633 @@
+openapi: 3.0.3
+info:
+  title: CCH content-service API
+  version: 0.3.0
+  description: >
+    Content composition API serving health checks, navigation, property catalog,
+    channel content, and destination search autocomplete for web and mobile.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /health/live:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      summary: Liveness probe
+      operationId: getHealthLive
+      tags: [Health]
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Service process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      summary: Readiness probe
+      operationId: getHealthReady
+      tags: [Health]
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Service is ready to serve traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Service is not ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/layout/top-navigation:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getNavigationConfig
+      summary: Fetch navigation configuration (menus, languages, currencies, help)
+      tags: [Navigation]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+        - name: platform
+          in: query
+          description: Target platform
+          schema:
+            type: string
+            enum: [android, ios]
+        - name: currency
+          in: query
+          description: Preferred currency
+          schema:
+            type: string
+            default: USD
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Navigation configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NavigationConfigResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/layout/footer:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getFooterConfig
+      summary: Fetch footer configuration (columns, copyright, social links)
+      tags: [Layout]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Footer configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FooterConfigResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/home/sections:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getHomeSections
+      summary: Fetch home screen sections (explore, dining, etc.)
+      tags: [Home]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Home screen sections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeSectionsResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/properties/search-config:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getSearchConfig
+      summary: Fetch property search configuration (fields, buttons)
+      tags: [Properties]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Search configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchConfigResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/properties/filters:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getPropertyFilters
+      summary: Fetch property search filters (sort options, filter categories)
+      tags: [Properties]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+        - name: destination_id
+          in: query
+          description: Destination identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Property filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyFiltersResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/properties/sort-options:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getPropertySortOptions
+      summary: Fetch property search sort options
+      tags: [Properties]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Property sort options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertySortOptionsResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/static-resources:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getStaticResources
+      summary: Fetch static UI copy and icons grouped by page
+      tags: [Content]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+        - name: page
+          in: query
+          description: Optional page filter (e.g. home). Omit to return all pages.
+          schema:
+            type: string
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Static resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaticResourcesResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/properties/property-list-search:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getPropertyListSearch
+      summary: Search properties for a destination
+      tags: [Properties]
+      parameters:
+        - name: cityCode
+          in: query
+          schema:
+            type: string
+        - name: countryCode
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: rooms
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: adults
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: children
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+        - name: infants
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+        - name: tags
+          in: query
+          description: Comma-separated tag filters (OR semantics)
+          schema:
+            type: string
+        - name: promoCode
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [price-high-to-low, price-low-to-high, top-review-score]
+        - $ref: "#/components/parameters/XLanguage"
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Property list search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListSearchResponse"
+              examples:
+                phuketResults:
+                  summary: Phuket property list search
+                  value: {"data":{"total":1,"properties":[{"searchId":"property-AN-TH-004","propertyCode":"AN-TH-004","title":"Anantara Koh Yao Yai Resort & Villas","cityName":"Phuket","tags":["WELLNESS","FAMILY","PET_FRIENDLY"],"tripadvisorReviewScore":4.8,"hotelStars":5,"brandIcon":{"domain":"cdn.example.com","path":"/brands/anantara.svg"},"pricePerNight":12040,"currency":"USD","media":{"gallery":[{"id":"property-image-1","url":"https://cdn.example.com/properties/AN-TH-004/gallery-1.jpg","thumbnailUrl":"https://cdn.example.com/properties/AN-TH-004/gallery-1-thumb.jpg","altText":"Resort outdoor lounge","sortOrder":1}],"view360Url":"https://cdn.example.com/properties/AN-TH-004/360view.html"},"location":{"address":{"fullAddress":"101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"},"coordinates":{"latitude":8.012543,"longitude":98.591244}}}]}}
+        "400":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/properties/{propertyCode}:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getPropertyByCode
+      summary: Fetch property details by property code
+      tags: [Properties]
+      parameters:
+        - $ref: "#/components/parameters/XLanguage"
+        - name: propertyCode
+          in: path
+          required: true
+          description: Unique property code.
+          example: AN-TH-004
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Property details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyDetailResponse"
+              examples:
+                anantaraKohYaoYai:
+                  summary: Anantara Koh Yao Yai Resort & Villas
+                  value: {"data":{"property":{"propertyCode":"AN-TH-004","propertyBackCode":"AN-TH-DD-004","title":"Anantara Koh Yao Yai Resort & Villas","cityName":"Phuket","tags":["WELLNESS","FAMILY","PET_FRIENDLY"],"tripadvisorReviewScore":4.8,"tripadvisorReviewCount":248,"hotelStars":5,"brandIcon":{"domain":"cdn.example.com","path":"/brands/anantara.svg"},"thumbnailUrl":"https://cdn.example.com/properties/AN-TH-004/thumbnail.jpg","locationName":"Ko Yao Yai Island","countryCode":"TH","overview":{"shortDescription":"An all-villa sanctuary surrounded by emerald limestone cliffs, turquoise waters and lush jungle.","fullDescription":"At Anantara, we believe that every journey should live long in the memory. This all-villa sanctuary offers an intimate escape into nature, surrounded by emerald limestone cliffs, turquoise waters and lush jungle."},"media":{"gallery":[{"id":"property-image-1","url":"https://cdn.example.com/properties/AN-TH-004/gallery-1.jpg","thumbnailUrl":"https://cdn.example.com/properties/AN-TH-004/gallery-1-thumb.jpg","altText":"Resort outdoor lounge","sortOrder":1}],"view360Url":"https://cdn.example.com/properties/AN-TH-004/360view.html"},"accommodationSummary":[{"type":"SUITE","label":"Suites","count":148},{"type":"VILLA","label":"Villas","count":42},{"type":"RESIDENCE","label":"Residences","count":27}],"guestLovedFeatures":[{"code":"BEACHFRONT","label":"Beachfront","icon":"beachfront"},{"code":"PRIVATE_BEACH","label":"Private beach","icon":"private-beach"},{"code":"PRIVATE_POOL","label":"Private pool","icon":"pool"},{"code":"WATERSPORTS_CENTRE","label":"Watersports centre","icon":"watersports"}],"amenities":{"featured":[{"code":"BUSINESS_SERVICES","label":"Business services","icon":"business-services"},{"code":"WATERSPORTS","label":"Water sports","icon":"watersports"},{"code":"INTERNET_ACCESS","label":"Internet access","icon":"wifi"},{"code":"TECHNOGYM","label":"Technogym","icon":"gym"}],"other":[{"code":"VALET_SERVICES","label":"Valet services","icon":"valet"},{"code":"CONCIERGE","label":"Concierge","icon":"concierge"},{"code":"RESTAURANT","label":"Restaurant onsite","icon":"restaurant"},{"code":"ROOM_SERVICE","label":"Room service","icon":"room-service"},{"code":"FREE_PARKING","label":"Free parking","icon":"parking"},{"code":"DIGITAL_KEY","label":"Digital key","icon":"digital-key"},{"code":"LAUNDRY","label":"Laundry","icon":"laundry"},{"code":"PET_FRIENDLY","label":"Pet-friendly","icon":"pet"},{"code":"SPA","label":"Spa","icon":"spa"},{"code":"POOL","label":"Pool","icon":"pool"}]},"location":{"address":{"fullAddress":"88/8 Moo 4, Ko Yao, Phang Nga, 82160, Thailand"},"coordinates":{"latitude":7.995,"longitude":98.585},"travelInformation":["20 minutes from Phuket Airport to the private lounge at Laem Sai Pier","A scenic 35-minute boat ride from Laem Sai Pier","Approximately 30 minutes from Thalane Pier, Krabi"],"directionUrl":"https://maps.example.com/directions/AN-TH-004"},"rooms":[{"roomCode":"DELUXE_POOL_VILLA","roomName":"Deluxe Pool Villa","description":"Located in low-rise buildings that melt into the landscape, this villa offers spacious living both inside and out.","bedConfiguration":[{"bedType":"KING","label":"King bed","quantity":1}],"maximumOccupancy":{"totalGuests":2,"adults":2,"children":1},"size":{"value":140,"unit":"sqm"},"remainingRooms":3,"roomCategoryCode":"STDDBL","summaryFeatures":[{"code":"KITCHENETTE","label":"Kitchenette","icon":"kitchenette"},{"code":"WALK_IN_WARDROBE","label":"Walk-in wardrobe","icon":"wardrobe"},{"code":"INDOOR_OUTDOOR_SHOWERS","label":"Indoor and outdoor showers","icon":"shower"}],"highlights":[{"code":"PRIVATE_POOL","label":"Private pool","icon":"pool"},{"code":"SEA_VIEWS","label":"Uninterrupted sea views","icon":"sea-view"},{"code":"FAMILY_OPTIONS","label":"Families can choose from sea views or pool access","icon":"family"}],"amenities":[{"code":"SOFA_CHAIR","label":"Sofa & Chair","icon":"sofa"},{"code":"FLAT_SCREEN_TV","label":"Flat-screen TV","icon":"tv"},{"code":"COFFEE_TEA","label":"Coffee & Tea Making Facilities","icon":"coffee"},{"code":"MINIBAR","label":"Minibar","icon":"minibar"}],"bathroomAmenities":[{"code":"BATHROBES","label":"2 Bathrobes","icon":"bathrobe"},{"code":"SEPARATE_BATHTUB_SHOWER","label":"Separate bathtub and shower","icon":"bathtub"},{"code":"HAIRDRYER","label":"Hairdryer","icon":"hairdryer"},{"code":"SLIPPERS","label":"Slippers","icon":"slippers"}],"media":{"gallery":[{"id":"room-image-1","url":"https://cdn.example.com/properties/AN-TH-004/rooms/deluxe-pool-villa-1.jpg","thumbnailUrl":"https://cdn.example.com/properties/AN-TH-004/rooms/deluxe-pool-villa-1-thumb.jpg","altText":"Deluxe Pool Villa bedroom","sortOrder":1}],"view360Url":"https://cdn.example.com/properties/AN-TH-004/rooms/deluxe-pool-villa-360.html"},"fromPrice":{"amount":36120,"currency":"THB","numberOfNights":3},"rateGroups":[{"type":"PUBLIC","label":"Guest rates","rates":[{"ratePlanCode":"ONHR","rateGroupCode":"ADVANCE_SAVER","codeForReservation":{"propertyCode":"AN-TH-004","roomCode":"DELUXE_POOL_VILLA","ratePlanCode":"ONHR","rateGroupCode":"ADVANCE_SAVER"},"rateName":"ADVANCE SAVER","rateDescription":"Exclusive rates for luxurious escapes at Anantara","badges":["Non-refundable","Pay now"],"pricing":{"currency":"THB","total":36120,"pricePerNight":12040,"numberOfNights":3},"cancellation":{"refundable":false,"freeCancellation":false,"freeCancellationDeadline":"2026-07-24T18:00:00+07:00","timezone":"Asia/Bangkok","displayText":"Non-refundable","penaltyAmount":36120},"loyalty":{"earnAmount":375,"redeemableAmount":1250,"currency":"D$"},"directBookingBenefits":[{"code":"RESORT_CREDIT","label":"Earn USD 100 resort credit","icon":"gift"},{"code":"AIRPORT_TRANSFER","label":"Free airport transfer","icon":"transfer"}],"anotherRates":[{"ratePlanCode":"ONHR","rateGroupCode":"ADVANCE_SAVER","codeForReservation":{"propertyCode":"AN-TH-004","roomCode":"DELUXE_POOL_VILLA","ratePlanCode":"ONHR","rateGroupCode":"ADVANCE_SAVER"},"rateName":"ADVANCE SAVER with breakfast","rateDescription":"Exclusive rates for luxurious escapes at Anantara with daily breakfast","badges":["Non-refundable","Pay now"],"additionalPrice":500,"pricing":{"currency":"THB","total":36620,"pricePerNight":12206.67,"numberOfNights":3},"cancellation":{"refundable":false,"freeCancellation":false,"freeCancellationDeadline":"2026-07-24T18:00:00+07:00","timezone":"Asia/Bangkok","displayText":"Non-refundable","penaltyAmount":36620},"loyalty":{"earnAmount":375,"redeemableAmount":1250,"currency":"D$"},"directBookingBenefits":[{"code":"RESORT_CREDIT","label":"Earn USD 100 resort credit","icon":"gift"},{"code":"AIRPORT_TRANSFER","label":"Free airport transfer","icon":"transfer"}]}]}]},{"type":"MEMBER","label":"Minor DISCOVERY rates","membershipPromotion":{"savingPercentage":12},"rates":[{"ratePlanCode":"ONHR","rateGroupCode":"MEMBER_FLEX","codeForReservation":{"propertyCode":"AN-TH-004","roomCode":"DELUXE_POOL_VILLA","ratePlanCode":"ONHR","rateGroupCode":"MEMBER_FLEX"},"rateName":"Minor DISCOVERY Member Rate","rateDescription":"Exclusive member rate with additional benefits","badges":["Save up to 12%","Free cancellation","Pay now"],"pricing":{"currency":"THB","total":33500,"pricePerNight":11166.67,"numberOfNights":3},"cancellation":{"refundable":true,"freeCancellation":true,"freeCancellationDeadline":"2026-07-24T18:00:00+07:00","timezone":"Asia/Bangkok","displayText":"Free cancellation until 24 Jul","penaltyAmount":0},"loyalty":{"earnAmount":375,"redeemableAmount":1250,"currency":"D$"},"directBookingBenefits":[{"code":"RESORT_CREDIT","label":"Earn USD 100 resort credit","icon":"gift"},{"code":"AIRPORT_TRANSFER","label":"Free airport transfer","icon":"transfer"},{"code":"EARLY_CHECK_IN","label":"Early check-in, subject to availability","icon":"clock"},{"code":"LATE_CHECK_OUT","label":"Late check-out, subject to availability","icon":"clock"}]}]}]}]}}}
+        "400":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Invalid property code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Property not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /content/v1/destination-search:
+    parameters:
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/LegacyRequestId'
+    get:
+      operationId: getDestinationSearch
+      summary: Destination search autocomplete
+      tags: [Search]
+      parameters:
+        - $ref: "#/components/parameters/XLanguageRequired"
+        - name: q
+          in: query
+          required: true
+          description: Search text (minimum 2 characters).
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        "200":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Autocomplete suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationSearchResponse"
+        "400":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          headers:
+            X-Correlation-ID: { $ref: '#/components/headers/CorrelationId' }
+            X-Request-ID: { $ref: '#/components/headers/LegacyRequestId' }
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  headers:
+    CorrelationId:
+      description: >-
+        Canonical operational correlation identifier selected or generated
+        for this request. It is distinct from the W3C trace identifier.
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+    LegacyRequestId:
+      description: Deprecated response alias with the same value as X-Correlation-ID.
+      required: true
+      deprecated: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+  parameters:
+    XLanguage:
+      name: x-language
+      in: header
+      required: false
+      description: Preferred content language. Defaults to en when omitted.
+      schema:
+        type: string
+        default: en
+        enum: [en, th]
+      example: en
+    XLanguageRequired:
+      name: x-language
+      in: header
+      required: true
+      description: Preferred content language (`en` or `th`).
+      schema:
+        type: string
+        enum: [en, th]
+      example: en
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: >-
+        Canonical operational correlation identifier. Exactly one valid
+        value is accepted. A present invalid canonical value never falls
+        back to the legacy header.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+    LegacyRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      deprecated: true
+      description: >-
+        Migration-only alias accepted when the canonical header is absent.
+        If both headers are present, they must be one equal valid value.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
+  schemas:
+    HealthResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Health"
+    Health:
+      type: object
+      required: [service, state]
+      properties:
+        service:
+          type: string
+          example: content-service
+        state:
+          type: string
+          example: ok
+        checkedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: SERVICE_UNAVAILABLE
+        message:
+          type: string
+        traceId:
+          description: Legacy field containing the operational correlation ID; not a W3C trace ID.
+          type: string
+    NavigationConfigResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/NavigationConfig"
+    NavigationConfig:
+      type: object
+      required: [mainMenus, utilities]
+      properties:
+        mainMenus:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuItem"
+        utilities:
+          $ref: "#/components/schemas/Utilities"
+    MenuItem:
+      type: object
+      required: [id, label, actionUrl]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+        actionUrl:
+          type: string
+    Utilities:
+      type: object
+      required: [languages, currencies, helpSupport]
+      properties:
+        languages:
+          $ref: "#/components/schemas/LanguageUtility"
+        currencies:
+          $ref: "#/components/schemas/CurrencyUtility"
+        helpSupport:
+          $ref: "#/components/schemas/HelpSupport"
+    LanguageUtility:
+      type: object
+      required: [options]
+      properties:
+        # currentSelected:
+        #   type: string
+        iconUrl:
+          type: string
+          format: uri
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/LanguageOption"
+    LanguageOption:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+    CurrencyUtility:
+      type: object
+      required: [options]
+      properties:
+        # currentSelected:
+        #   type: string
+        iconUrl:
+          type: string
+          format: uri
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrencyOption"
+    CurrencyOption:
+      type: object
+      required: [code, symbol, label]
+      properties:
+        code:
+          type: string
+        symbol:
+          type: string
+        label:
+          type: string
+    HelpSupport:
+      type: object
+      required: [label, actionUrl]
+      properties:
+        label:
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+        actionUrl:
+          type: string
+    FooterConfigResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/FooterConfig"
+    FooterConfig:
+      type: object
+      required: [mainLogoUrl, discoveryLogoUrl, downloadApp, explore, connect, legalAndCopyright]
+      properties:
+        mainLogoUrl:
+          type: string
+          format: uri
+        discoveryLogoUrl:
+          type: string
+          format: uri
+        downloadApp:
+          $ref: "#/components/schemas/DownloadApp"
+        explore:
+          $ref: "#/components/schemas/ExploreSection"
+        connect:
+          $ref: "#/components/schemas/ConnectSection"
+        legalAndCopyright:
+          $ref: "#/components/schemas/LegalAndCopyright"
+    DownloadApp:
+      type: object
+      required: [title, subtitle, stores]
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppStore"
+    AppStore:
+      type: object
+      required: [label, actionUrl, iconUrl]
+      properties:
+        label:
+          type: string
+        actionUrl:
+          type: string
+          format: uri
+        iconUrl:
+          type: string
+          format: uri
+    ExploreSection:
+      type: object
+      required: [title, links]
+      properties:
+        title:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/FooterLink"
+    ConnectSection:
+      type: object
+      required: [title, links]
+      properties:
+        title:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectLink"
+    FooterLink:
+      type: object
+      required: [label, actionUrl]
+      properties:
+        label:
+          type: string
+        actionUrl:
+          type: string
+    ConnectLink:
+      type: object
+      required: [label, actionUrl, iconKey]
+      properties:
+        label:
+          type: string
+        actionUrl:
+          type: string
+        iconKey:
+          type: string
+    LegalAndCopyright:
+      type: object
+      required: [links, copyright]
+      properties:
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/FooterLink"
+        copyright:
+          type: string
+    HomeSectionsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/HomeData"
+    HomeData:
+      type: object
+      required: [language, containers]
+      properties:
+        language:
+          type: string
+          example: en
+        containers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Container"
+    Container:
+      type: object
+      required: [containerType, background, data]
+      properties:
+        containerType:
+          type: string
+        background:
+          $ref: "#/components/schemas/Background"
+        data:
+          $ref: "#/components/schemas/ContainerData"
+    Background:
+      type: object
+      required: [type, value, themeMode]
+      properties:
+        type:
+          type: string
+          example: image
+        value:
+          type: string
+        themeMode:
+          type: string
+          example: dark
+    ContainerData:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        tagline:
+          type: string
+        description:
+          type: string
+        ctaLabel:
+          type: string
+        searchPlaceholder:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        action:
+          $ref: "#/components/schemas/Action"
+        headerAction:
+          $ref: "#/components/schemas/Action"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContainerItem"
+        brands:
+          type: array
+          items:
+            $ref: "#/components/schemas/BrandItem"
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertyItem"
+        benefits:
+          type: array
+          items:
+            $ref: "#/components/schemas/BenefitItem"
+    Action:
+      type: object
+      required: [type, target]
+      properties:
+        type:
+          type: string
+        target:
+          type: string
+        params:
+          type: object
+          additionalProperties:
+            type: string
+    ContainerItem:
+      type: object
+      properties:
+        label:
+          type: string
+        propertyCount:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        action:
+          $ref: "#/components/schemas/Action"
+        restaurantName:
+          type: string
+        locationName:
+          type: string
+        description:
+          type: string
+        ctaLabel:
+          type: string
+    BrandItem:
+      type: object
+      required: [brandName, description, logoUrl, backgroundImageUrl, ctaLabel, action]
+      properties:
+        brandName:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+          format: uri
+        backgroundImageUrl:
+          type: string
+          format: uri
+        ctaLabel:
+          type: string
+        action:
+          $ref: "#/components/schemas/Action"
+    PropertyItem:
+      type: object
+      required: [propertyName, price, currency, period, imageUrl, action]
+      properties:
+        propertyName:
+          type: string
+        tag:
+          type: string
+        price:
+          type: string
+        currency:
+          type: string
+        period:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        action:
+          $ref: "#/components/schemas/Action"
+    BenefitItem:
+      type: object
+      required: [number, text, description]
+      properties:
+        number:
+          type: string
+        text:
+          type: string
+        description:
+          type: string
+    SearchConfigResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/SearchConfigData"
+    SearchConfigData:
+      type: object
+      required: [title, searchFields, buttons]
+      properties:
+        title:
+          type: string
+        searchFields:
+          $ref: "#/components/schemas/SearchFields"
+        buttons:
+          $ref: "#/components/schemas/SearchButtons"
+    SearchFields:
+      type: object
+      required: [destination, dates, rooms]
+      properties:
+        destination:
+          $ref: "#/components/schemas/FieldConfig"
+        dates:
+          $ref: "#/components/schemas/FieldConfig"
+        rooms:
+          $ref: "#/components/schemas/FieldConfig"
+    FieldConfig:
+      type: object
+      required: [id, label]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        placeholder:
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+    SearchButtons:
+      type: object
+      required: [submitLabel]
+      properties:
+        submitLabel:
+          type: string
+        promoCodeLabel:
+          type: string
+    PropertyFiltersResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PropertyFiltersData"
+    PropertyFiltersData:
+      type: object
+      required: [filterCategories]
+      properties:
+        filterCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilterCategoryDTO"
+    PropertySortOptionsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PropertySortOptionsData"
+    PropertySortOptionsData:
+      type: object
+      required: [sortOptions]
+      properties:
+        sortOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SortOptionDTO"
+    StaticResourcesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/StaticResourcesData"
+    StaticResourcesData:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties:
+          $ref: "#/components/schemas/StaticResourceValue"
+    StaticResourceValue:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+          nullable: true
+    SortOptionDTO:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+          description: >
+            Value to pass as `sort` on property-list-search.
+            Empty string = best match (omit or leave `sort` empty).
+          enum: ["", price-high-to-low, price-low-to-high, top-review-score]
+        label:
+          type: string
+    FilterCategoryDTO:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+    DestinationSearchResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/DestinationSearchData"
+    DestinationSearchData:
+      type: object
+      required: [destinations, properties]
+      properties:
+        destinations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationSuggestion"
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertySuggestion"
+    DestinationSuggestion:
+      type: object
+      required: [id, title, destinationType]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        destinationType:
+          type: string
+          enum: [region, country, city]
+        propertyCount:
+          type: integer
+          format: int32
+        countryName:
+          type: string
+        regionName:
+          type: string
+    PropertySuggestion:
+      type: object
+      required: [id, title, cityName, countryName, iconDomain, iconPath]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        cityName:
+          type: string
+        countryName:
+          type: string
+        regionName:
+          type: string
+        iconDomain:
+          type: string
+        iconPath:
+          type: string
+        tripadvisorReviewScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+    PropertyListSearchResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PropertyListSearchData"
+    PropertyListSearchData:
+      type: object
+      required: [total, properties]
+      properties:
+        total:
+          type: integer
+          format: int64
+          description: The total count of matching properties from Agent Search.
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertyListItem"
+    PropertyFields:
+      type: object
+      description: >
+        Canonical property field catalog. List search and property detail compose
+        from this schema via allOf and declare their own required subsets.
+      properties:
+        propertyCode:
+          type: string
+        propertyBackCode:
+          type: string
+        title:
+          type: string
+          description: Localized property display name from Sitecore.
+        cityName:
+          type: string
+        locationName:
+          type: string
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        tags:
+          type: array
+          items:
+            type: string
+        tripadvisorReviewScore:
+          type: number
+          format: float
+        hotelStars:
+          type: integer
+        brandIcon:
+          $ref: "#/components/schemas/BrandIcon"
+        overview:
+          $ref: "#/components/schemas/PropertyOverview"
+        media:
+          $ref: "#/components/schemas/PropertyMedia"
+        accommodationSummary:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccommodationSummary"
+        guestLovedFeatures:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        amenities:
+          $ref: "#/components/schemas/PropertyAmenities"
+        location:
+          $ref: "#/components/schemas/PropertyLocation"
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertyRoom"
+    PropertyListItem:
+      allOf:
+        - $ref: "#/components/schemas/PropertyFields"
+        - type: object
+          required: [searchId, propertyCode, title, cityName, brandIcon, media, pricePerNight, currency, location]
+          properties:
+            searchId:
+              type: string
+              description: Agent Search property document id.
+            pricePerNight:
+              type: number
+              format: double
+              description: Nightly rate from Agent Search catalog index (USD implicit). List search only.
+            currency:
+              type: string
+              description: Three-letter currency code (e.g. USD). List search only.
+    PropertyDetailResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PropertyDetailData"
+    PropertyDetailData:
+      type: object
+      required: [property]
+      properties:
+        property:
+          $ref: "#/components/schemas/PropertyDetail"
+    PropertyDetail:
+      allOf:
+        - $ref: "#/components/schemas/PropertyFields"
+        - type: object
+          required:
+            - propertyCode
+            - title
+            - cityName
+            - brandIcon
+            - thumbnailUrl
+            - propertyBackCode
+            - locationName
+            - countryCode
+            - overview
+            - media
+            - accommodationSummary
+            - guestLovedFeatures
+            - amenities
+            - location
+            - rooms
+            - tripadvisorReviewCount
+          properties:
+            thumbnailUrl:
+              type: string
+              format: uri
+              description: Primary hero image URL for property detail.
+            tripadvisorReviewCount:
+              type: integer
+              minimum: 0
+              description: Total number of TripAdvisor guest reviews for the property.
+    CodeLabelIcon:
+      type: object
+      required: [code, label, icon]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        icon:
+          type: string
+    PropertyOverview:
+      type: object
+      required: [shortDescription, fullDescription]
+      properties:
+        shortDescription:
+          type: string
+        fullDescription:
+          type: string
+    PropertyMedia:
+      type: object
+      required: [gallery]
+      properties:
+        gallery:
+          type: array
+          items:
+            $ref: "#/components/schemas/GalleryImage"
+        view360Url:
+          type: string
+          format: uri
+    GalleryImage:
+      type: object
+      required: [id, url, thumbnailUrl, altText, sortOrder]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+        altText:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+    AccommodationSummary:
+      type: object
+      required: [type, label, count]
+      properties:
+        type:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    PropertyAmenities:
+      type: object
+      required: [featured, other]
+      properties:
+        featured:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        other:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+    PropertyLocation:
+      type: object
+      required: [address, coordinates]
+      properties:
+        address:
+          $ref: "#/components/schemas/PropertyAddress"
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        travelInformation:
+          type: array
+          items:
+            type: string
+        directionUrl:
+          type: string
+          format: uri
+    PropertyAddress:
+      type: object
+      additionalProperties: false
+      required: [fullAddress]
+      properties:
+        fullAddress:
+          type: string
+          description: Complete formatted postal address of the property.
+          example: 88/8 Moo 4, Ko Yao, Phang Nga, 82160, Thailand
+    Coordinates:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+    PropertyRoom:
+      type: object
+      required:
+        - roomCode
+        - roomName
+        - description
+        - bedConfiguration
+        - maximumOccupancy
+        - size
+        - remainingRooms
+        - roomCategoryCode
+        - summaryFeatures
+        - highlights
+        - amenities
+        - bathroomAmenities
+        - media
+        - fromPrice
+        - rateGroups
+      properties:
+        roomCode:
+          type: string
+        roomName:
+          type: string
+        description:
+          type: string
+        bedConfiguration:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedConfiguration"
+        maximumOccupancy:
+          $ref: "#/components/schemas/MaximumOccupancy"
+        size:
+          $ref: "#/components/schemas/RoomSize"
+        remainingRooms:
+          type: integer
+          minimum: 0
+        roomCategoryCode:
+          type: string
+          description: Back-end room category code used by the property system.
+        summaryFeatures:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        highlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        amenities:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        bathroomAmenities:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+        media:
+          $ref: "#/components/schemas/RoomMedia"
+        fromPrice:
+          $ref: "#/components/schemas/FromPrice"
+        rateGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/RateGroup"
+    BedConfiguration:
+      type: object
+      required: [bedType, label, quantity]
+      properties:
+        bedType:
+          type: string
+        label:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+    MaximumOccupancy:
+      type: object
+      required: [totalGuests, adults, children]
+      properties:
+        totalGuests:
+          type: integer
+          minimum: 1
+        adults:
+          type: integer
+          minimum: 1
+        children:
+          type: integer
+          minimum: 0
+    RoomSize:
+      type: object
+      required: [value, unit]
+      properties:
+        value:
+          type: number
+          format: double
+          minimum: 0
+        unit:
+          type: string
+    RoomMedia:
+      $ref: "#/components/schemas/PropertyMedia"
+    FromPrice:
+      type: object
+      required: [amount, currency, numberOfNights]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        numberOfNights:
+          type: integer
+          minimum: 1
+    RateGroup:
+      type: object
+      required: [type, label, rates]
+      properties:
+        type:
+          type: string
+          enum: [PUBLIC, MEMBER]
+        label:
+          type: string
+        membershipPromotion:
+          $ref: "#/components/schemas/MembershipPromotion"
+        rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PropertyRate"
+    MembershipPromotion:
+      type: object
+      required: [savingPercentage]
+      properties:
+        savingPercentage:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+    PropertyRate:
+      allOf:
+        - $ref: "#/components/schemas/PropertyRateCore"
+        - type: object
+          properties:
+            anotherRates:
+              type: array
+              description: Alternate rate options grouped by a dimension such as meal plan (e.g. breakfast add-on).
+              items:
+                $ref: "#/components/schemas/AlternatePropertyRate"
+    PropertyRateCore:
+      type: object
+      required:
+        - ratePlanCode
+        - rateGroupCode
+        - codeForReservation
+        - rateName
+        - rateDescription
+        - badges
+        - pricing
+        - cancellation
+        - loyalty
+        - directBookingBenefits
+      properties:
+        ratePlanCode:
+          type: string
+        rateGroupCode:
+          type: string
+        codeForReservation:
+          $ref: "#/components/schemas/RateCodeForReservation"
+        rateName:
+          type: string
+        rateDescription:
+          type: string
+        badges:
+          type: array
+          items:
+            type: string
+        pricing:
+          $ref: "#/components/schemas/RatePricing"
+        cancellation:
+          $ref: "#/components/schemas/CancellationPolicy"
+        loyalty:
+          $ref: "#/components/schemas/LoyaltyValue"
+        directBookingBenefits:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeLabelIcon"
+    AlternatePropertyRate:
+      allOf:
+        - $ref: "#/components/schemas/PropertyRateCore"
+        - type: object
+          required: [additionalPrice]
+          properties:
+            additionalPrice:
+              type: number
+              format: double
+              description: >
+                Price delta relative to the parent base rate total
+                (this pricing.total − parent pricing.total).
+                Positive when the alternate option costs more (e.g. +500 THB for breakfast).
+    RateCodeForReservation:
+      type: object
+      description: >
+        Canonical identifiers to send when reserving this rate.
+      required: [propertyCode, roomCode, ratePlanCode, rateGroupCode]
+      properties:
+        propertyCode:
+          type: string
+        roomCode:
+          type: string
+        ratePlanCode:
+          type: string
+        rateGroupCode:
+          type: string
+    CodeLabel:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+    RatePricing:
+      type: object
+      required: [currency, total, pricePerNight, numberOfNights]
+      properties:
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        total:
+          type: number
+          format: double
+          minimum: 0
+        pricePerNight:
+          type: number
+          format: double
+          minimum: 0
+        numberOfNights:
+          type: integer
+          minimum: 1
+    CancellationPolicy:
+      type: object
+      required:
+        - refundable
+        - freeCancellation
+        - freeCancellationDeadline
+        - timezone
+        - displayText
+        - penaltyAmount
+      properties:
+        refundable:
+          type: boolean
+        freeCancellation:
+          type: boolean
+        freeCancellationDeadline:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        displayText:
+          type: string
+        penaltyAmount:
+          type: number
+          format: double
+          minimum: 0
+    LoyaltyValue:
+      type: object
+      required: [earnAmount, redeemableAmount, currency]
+      properties:
+        earnAmount:
+          type: number
+          format: double
+          minimum: 0
+        redeemableAmount:
+          type: number
+          format: double
+          minimum: 0
+        currency:
+          type: string
+    BrandIcon:
+      type: object
+      properties:
+        domain:
+          type: string
+        path:
+          type: string

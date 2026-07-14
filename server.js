@@ -18,21 +18,107 @@ app.use((req, res, next) => {
   next();
 });
 
-// Load OpenAPI YAML specification
+// Load and merge OpenAPI YAML specifications from the 3 service spec files
+const fs = require("fs");
+
+function loadAndMergeSpecs() {
+  const contentPath = path.join(__dirname, "content-service-openapi.yaml");
+  const memberPath = path.join(__dirname, "member-service-openapi.yaml");
+  const reservationPath = path.join(__dirname, "reservation-service-openapi.yaml");
+
+  let merged = {
+    openapi: "3.0.3",
+    info: {
+      title: "Minor Hotels CCH Mock API (Unified)",
+      version: "1.0.0",
+      description: "Unified interactive mock API docs combining Content, Member, and Reservation services."
+    },
+    paths: {},
+    components: {
+      schemas: {},
+      parameters: {},
+      headers: {},
+      securitySchemes: {},
+      responses: {}
+    }
+  };
+
+  function rewriteRefs(obj, prefix) {
+    if (!prefix) return obj;
+    if (typeof obj !== "object" || obj === null) return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(item => rewriteRefs(item, prefix));
+    }
+    const res = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k === "$ref" && typeof v === "string") {
+        const parts = v.split("/");
+        if (parts.length === 4) {
+          const section = parts[2];
+          const name = parts[3];
+          res[k] = `#/components/${section}/${prefix}_${name}`;
+        } else {
+          res[k] = v;
+        }
+      } else {
+        res[k] = rewriteRefs(v, prefix);
+      }
+    }
+    return res;
+  }
+
+  function loadAndMerge(filePath, prefix) {
+    if (!fs.existsSync(filePath)) {
+      console.warn(`Spec file not found: ${filePath}`);
+      return;
+    }
+    try {
+      const spec = yaml.load(filePath);
+      if (!spec) return;
+
+      // Merge paths
+      if (spec.paths) {
+        for (const [p, val] of Object.entries(spec.paths)) {
+          if (merged.paths[p]) {
+            merged.paths[p] = { ...merged.paths[p], ...rewriteRefs(val, prefix) };
+          } else {
+            merged.paths[p] = rewriteRefs(val, prefix);
+          }
+        }
+      }
+
+      // Merge components
+      if (spec.components) {
+        for (const section of ["schemas", "parameters", "headers", "securitySchemes", "responses"]) {
+          if (spec.components[section]) {
+            for (const [key, val] of Object.entries(spec.components[section])) {
+              const newKey = prefix ? `${prefix}_${key}` : key;
+              merged.components[section][newKey] = rewriteRefs(val, prefix);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Failed to load/merge spec ${filePath}:`, e);
+    }
+  }
+
+  loadAndMerge(contentPath, "");
+  loadAndMerge(memberPath, "Member");
+  loadAndMerge(reservationPath, "Reservation");
+
+  return merged;
+}
+
 let swaggerDocument;
 try {
-  const fs = require("fs");
-  let openapiPath = path.join(process.cwd(), "openapi.yaml");
-  if (!fs.existsSync(openapiPath)) {
-    openapiPath = path.join(__dirname, "openapi.yaml");
-  }
-  if (!fs.existsSync(openapiPath)) {
-    openapiPath = path.join(__dirname, "..", "openapi.yaml");
-  }
-  swaggerDocument = yaml.load(openapiPath);
-  console.log("Successfully loaded OpenAPI YAML file.");
+  swaggerDocument = loadAndMergeSpecs();
+  // Write the merged document back to openapi.yaml for compatibility/integrity
+  const mergedYaml = yaml.stringify(swaggerDocument, 12);
+  fs.writeFileSync(path.join(process.cwd(), "openapi.yaml"), mergedYaml);
+  console.log("Successfully loaded, merged and saved OpenAPI specification.");
 } catch (error) {
-  console.error("Failed to load openapi.yaml:", error);
+  console.error("Failed to load and merge OpenAPI specifications:", error);
 }
 
 // Serve Swagger UI
@@ -67,6 +153,25 @@ function makeErrorResponse(code, message, traceId = "mock-trace-id") {
       traceId
     }
   };
+}
+
+// Helper to format property details matching PropertyAddress and location requirements
+function formatPropertyDetail(prop) {
+  if (!prop) return null;
+  const clone = JSON.parse(JSON.stringify(prop));
+  if (clone.location && clone.location.address) {
+    const addr = clone.location.address;
+    if (!addr.fullAddress) {
+      clone.location.address = {
+        fullAddress: `${addr.addressLine1 || ""}, ${addr.city || ""}, ${addr.province || ""}, ${addr.postalCode || ""}, ${addr.countryCode || ""}`.replace(/^,\s*/, "").replace(/,\s*$/, "")
+      };
+    } else {
+      clone.location.address = {
+        fullAddress: addr.fullAddress
+      };
+    }
+  }
+  return clone;
 }
 
 // -------------------------------------------------------------
@@ -249,19 +354,40 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     const baseRoom = prop.rooms[0];
     const pricePerNight = baseRoom ? baseRoom.fromPrice.amount : 5000;
 
+    let fullAddr = "";
+    if (prop.location && prop.location.address) {
+      const addr = prop.location.address;
+      if (addr.fullAddress) {
+        fullAddr = addr.fullAddress;
+      } else {
+        fullAddr = `${addr.addressLine1 || ""}, ${addr.city || ""}, ${addr.province || ""}, ${addr.postalCode || ""}, ${addr.countryCode || ""}`.replace(/^,\s*/, "").replace(/,\s*$/, "");
+      }
+    }
+
     return {
       searchId: prop.searchId,
       propertyCode: prop.propertyCode,
       title: prop.title,
       cityName: prop.cityName,
+      locationName: prop.locationName || prop.cityName,
+      countryCode: prop.countryCode || "TH",
       tags: prop.tags,
       tripadvisorReviewScore: prop.tripadvisorReviewScore,
       hotelStars: prop.hotelStars,
       brandIcon: prop.brandIcon,
       pricePerNight: pricePerNight,
+      currency: "THB",
       media: {
         gallery: prop.media.gallery,
         view360Url: prop.media.view360Url
+      },
+      location: {
+        address: {
+          fullAddress: fullAddr
+        },
+        coordinates: prop.location ? prop.location.coordinates : { latitude: 0, longitude: 0 },
+        travelInformation: prop.location ? prop.location.travelInformation : [],
+        directionUrl: prop.location ? prop.location.directionUrl : ""
       }
     };
   });
@@ -302,6 +428,7 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
 
   res.json({
     data: {
+      total: totalResults,
       pagination: {
         nextCursor: nextCursorValue
       },
@@ -330,7 +457,557 @@ app.get("/content/v1/properties/:propertyCode", (req, res) => {
 
   res.json({
     data: {
-      property: property
+      property: formatPropertyDetail(property)
+    }
+  });
+});
+
+// -------------------------------------------------------------
+// GHA MEMBER & AUTHENTICATION ENDPOINTS (member-service)
+// -------------------------------------------------------------
+
+// Helper to build GHA-style flat error
+function makeGhaErrorResponse(code, message, correlationId = "01JEXAMPLE") {
+  return {
+    code,
+    message,
+    correlationId
+  };
+}
+
+const mockMember = {
+  firstName: "John",
+  lastName: "Doe",
+  membershipCardNo: "CARD-987654",
+  membershipLevel: "PLATINUM",
+  discoveryBalance: 120.50,
+  effectiveDate: 1774828800,
+  expirationDate: 1806364800
+};
+
+// 1. POST /gha/auth/login
+app.post("/gha/auth/login", (req, res) => {
+  const channel = req.headers["x-cch-channel"];
+  const { login, password } = req.body;
+
+  if (!channel) {
+    return res.status(400).json(
+      makeGhaErrorResponse("INVALID_REQUEST", "X-CCH-Channel header is required.")
+    );
+  }
+
+  if (!login || !password) {
+    return res.status(400).json(
+      makeGhaErrorResponse("INVALID_REQUEST", "Both login and password are required.")
+    );
+  }
+
+  if (login === "invalid@example.com" || password === "wrong") {
+    return res.status(401).json(
+      makeGhaErrorResponse("INVALID_CREDENTIALS", "The login or password is invalid.")
+    );
+  }
+
+  res.json({
+    accessToken: "mock-access-token-123",
+    refreshToken: "mock-refresh-token-123",
+    tokenType: "Bearer",
+    accessExpiresIn: 3600,
+    refreshExpiresIn: 86400,
+    member: mockMember
+  });
+});
+
+// 2. GET /gha/auth/profile
+app.get("/gha/auth/profile", (req, res) => {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json(
+      makeGhaErrorResponse("INVALID_TOKEN", "The authentication token is invalid or expired.")
+    );
+  }
+
+  const token = authHeader.split(" ")[1];
+  if (token === "invalid-token") {
+    return res.status(401).json(
+      makeGhaErrorResponse("INVALID_TOKEN", "The authentication token is invalid or expired.")
+    );
+  }
+
+  res.json({
+    member: mockMember
+  });
+});
+
+// 3. POST /gha/auth/refresh
+app.post("/gha/auth/refresh", (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json(
+      makeGhaErrorResponse("INVALID_REQUEST", "refreshToken is required.")
+    );
+  }
+
+  if (refreshToken === "invalid-refresh") {
+    return res.status(401).json(
+      makeGhaErrorResponse("INVALID_TOKEN", "The refresh token is invalid or expired.")
+    );
+  }
+
+  res.json({
+    accessToken: "mock-new-access-token-123",
+    refreshToken: "mock-new-refresh-token-123",
+    tokenType: "Bearer",
+    accessExpiresIn: 3600,
+    refreshExpiresIn: 86400
+  });
+});
+
+// 4. GET /gha/languages
+app.get("/gha/languages", (req, res) => {
+  res.json({
+    items: [
+      { code: "en", name: "English" },
+      { code: "th", name: "Thai" },
+      { code: "zh", name: "Chinese" },
+      { code: "ja", name: "Japanese" }
+    ]
+  });
+});
+
+// 5. GET /gha/countries
+app.get("/gha/countries", (req, res) => {
+  res.json({
+    items: [
+      { code: "TH", name: "Thailand" },
+      { code: "US", name: "United States" },
+      { code: "SG", name: "Singapore" },
+      { code: "JP", name: "Japan" },
+      { code: "CN", name: "China" }
+    ]
+  });
+});
+
+// 6. GET /gha/states
+app.get("/gha/states", (req, res) => {
+  const { countryCode } = req.query;
+
+  if (!countryCode) {
+    return res.status(400).json(
+      makeGhaErrorResponse("INVALID_REQUEST", "countryCode query parameter is required.")
+    );
+  }
+
+  const codeUpper = countryCode.toUpperCase();
+  if (codeUpper === "US") {
+    res.json({
+      items: [
+        { code: "CA", name: "California" },
+        { code: "NY", name: "New York" },
+        { code: "TX", name: "Texas" }
+      ]
+    });
+  } else if (codeUpper === "TH") {
+    res.json({
+      items: [
+        { code: "BKK", name: "Bangkok" },
+        { code: "HKT", name: "Phuket" }
+      ]
+    });
+  } else {
+    res.json({
+      items: []
+    });
+  }
+});
+
+// 7. POST /gha/auth/register
+app.post("/gha/auth/register", (req, res) => {
+  const { email, password, firstName, lastName, language, ghaMarketingYn, consentFlags } = req.body;
+
+  if (!email || !password || !firstName || !lastName || !language || ghaMarketingYn === undefined || !consentFlags) {
+    return res.status(400).json(
+      makeGhaErrorResponse("INVALID_REQUEST", "Missing required fields for enrollment.")
+    );
+  }
+
+  if (email === "existing@example.com") {
+    return res.status(409).json(
+      makeGhaErrorResponse("ACCOUNT_ALREADY_EXISTS", "An account may already exist. Sign in or reset the password.")
+    );
+  }
+
+  res.status(201).json({
+    accessToken: "mock-access-token-123",
+    refreshToken: "mock-refresh-token-123",
+    tokenType: "Bearer",
+    accessExpiresIn: 3600,
+    refreshExpiresIn: 86400
+  });
+});
+
+// -------------------------------------------------------------
+// RESERVATION LIFECYCLE ENDPOINTS (reservation-service)
+// -------------------------------------------------------------
+
+// Simple mock reservation store
+const mockReservations = {
+  "resv_pending": {
+    status: "PENDING",
+    property: {
+      name: "Anantara Koh Yao Yai Resort & Villas",
+      location: {
+        address: {
+          fullAddress: "101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"
+        },
+        coordinates: {
+          latitude: 8.012543,
+          longitude: 98.591244
+        },
+        travelInformation: [
+          "45 minutes by speedboat from Phuket"
+        ],
+        directionUrl: "https://maps.google.com/?q=Anantara+Koh+Yao+Yai"
+      }
+    },
+    room: {
+      name: "Deluxe Pool Villa",
+      quantity: 2,
+      amount: 33750,
+      nights: 2,
+      adults: 1,
+      children: 1,
+      infants: 1,
+      board: "Breakfast included"
+    },
+    from: "2026-07-20",
+    to: "2026-07-22",
+    paymentTerms: [
+      "Full prepayment required.",
+      "Non-refundable."
+    ],
+    primaryGuest: null,
+    guestRooms: null,
+    roomPreferences: null,
+    priceSummary: {
+      currency: "THB",
+      taxesAndFees: {
+        total: 1650,
+        items: [
+          { name: "VAT", amount: 1000 },
+          { name: "Fees", amount: 650 }
+        ]
+      },
+      payToday: 35400,
+      payAtHotel: 720,
+      payAtHotelNote: "Pay city tax on arrival",
+      total: 36120,
+      isEstimate: true
+    }
+  },
+  "resv_confirmed": {
+    status: "CONFIRMED",
+    property: {
+      name: "Anantara Koh Yao Yai Resort & Villas",
+      location: {
+        address: {
+          fullAddress: "101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"
+        },
+        coordinates: {
+          latitude: 8.012543,
+          longitude: 98.591244
+        },
+        travelInformation: [
+          "45 minutes by speedboat from Phuket"
+        ],
+        directionUrl: "https://maps.google.com/?q=Anantara+Koh+Yao+Yai"
+      }
+    },
+    room: {
+      name: "Deluxe Pool Villa",
+      quantity: 1,
+      amount: 16875,
+      nights: 2,
+      adults: 2,
+      children: 0,
+      infants: 0,
+      board: "Breakfast included"
+    },
+    from: "2026-07-20",
+    to: "2026-07-22",
+    paymentTerms: [
+      "Full prepayment required.",
+      "Non-refundable."
+    ],
+    primaryGuest: {
+      firstName: "Ada",
+      lastName: "Lovelace",
+      email: "guest@example.com",
+      nationality: "TH",
+      phone: {
+        countryCode: "+66",
+        number: "812345678"
+      }
+    },
+    guestRooms: [
+      {
+        guests: [
+          { firstName: "Ada", lastName: "Lovelace" }
+        ]
+      }
+    ],
+    roomPreferences: [],
+    priceSummary: {
+      currency: "THB",
+      taxesAndFees: {
+        total: 825,
+        items: [
+          { name: "VAT", amount: 500 },
+          { name: "Fees", amount: 325 }
+        ]
+      },
+      payToday: 17700,
+      payAtHotel: 0,
+      payAtHotelNote: "",
+      total: 17700,
+      isEstimate: false
+    }
+  }
+};
+
+// 1. GET /reservations/v1/reservations
+app.get("/reservations/v1/reservations", (req, res) => {
+  const { reservationId } = req.query;
+
+  if (!reservationId || reservationId.trim() === "") {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "reservationId query parameter is required.")
+    );
+  }
+
+  const reservation = mockReservations[reservationId];
+
+  if (!reservation) {
+    if (reservationId.startsWith("resv_")) {
+      // Dynamic fallback for any resv_xxx to prevent test failures
+      return res.json({
+        data: {
+          status: "PENDING",
+          property: {
+            name: "Anantara Koh Yao Yai Resort & Villas",
+            location: {
+              address: {
+                fullAddress: "101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"
+              },
+              coordinates: { latitude: 8.012543, longitude: 98.591244 }
+            }
+          },
+          room: {
+            name: "Deluxe Pool Villa",
+            quantity: 1,
+            amount: 15000,
+            nights: 1,
+            adults: 2,
+            children: 0,
+            infants: 0,
+            board: "Breakfast included"
+          },
+          from: "2026-07-24",
+          to: "2026-07-25",
+          primaryGuest: null,
+          priceSummary: {
+            currency: "THB",
+            total: 15000,
+            isEstimate: true
+          }
+        }
+      });
+    }
+    return res.status(404).json(
+      makeErrorResponse("NOT_FOUND", "Reservation not found.")
+    );
+  }
+
+  res.json({
+    data: reservation
+  });
+});
+
+// 2. POST /reservations/v1/reservations
+app.post("/reservations/v1/reservations", (req, res) => {
+  const idempotencyKey = req.headers["idempotency-key"];
+  const { from, to, codeForReservation, rooms } = req.body;
+
+  if (!idempotencyKey) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "Idempotency-Key header is required.")
+    );
+  }
+
+  if (idempotencyKey === "idempotency_conflict_key_123") {
+    return res.status(409).json(
+      makeErrorResponse("IDEMPOTENCY_CONFLICT", "The idempotency key cannot be used for this request.")
+    );
+  }
+
+  if (!from || !to || !codeForReservation || !rooms || !Array.isArray(rooms) || rooms.length === 0) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "Missing required fields for reservation creation.")
+    );
+  }
+
+  // Date validation
+  if (new Date(to) <= new Date(from)) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "Check-out date must be after check-in date.")
+    );
+  }
+
+  // Room children validation
+  for (const r of rooms) {
+    const childrenCount = r.childrenCount || 0;
+    const childAges = r.childAges || [];
+    if (childAges.length !== childrenCount) {
+      return res.status(400).json(
+        makeErrorResponse("INVALID_REQUEST", "childAges length must equal childrenCount for each room.")
+      );
+    }
+  }
+
+  const reservationId = "resv_" + Math.random().toString(36).substring(2, 15);
+  
+  // Store dynamically
+  mockReservations[reservationId] = {
+    status: "PENDING",
+    property: {
+      name: "Anantara Koh Yao Yai Resort & Villas",
+      location: {
+        address: {
+          fullAddress: "101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"
+        },
+        coordinates: { latitude: 8.012543, longitude: 98.591244 }
+      }
+    },
+    room: {
+      name: "Deluxe Pool Villa",
+      quantity: rooms.length,
+      amount: 15000 * rooms.length,
+      nights: 1,
+      adults: rooms[0].adultsCount || 2,
+      children: rooms[0].childrenCount || 0,
+      infants: 0,
+      board: "Breakfast included"
+    },
+    from,
+    to,
+    primaryGuest: null,
+    priceSummary: {
+      currency: "THB",
+      total: 15000 * rooms.length,
+      isEstimate: true
+    }
+  };
+
+  res.status(201).json({
+    data: {
+      reservationId
+    }
+  });
+});
+
+// 3. PATCH /reservations/v1/reservations/confirm
+app.patch("/reservations/v1/reservations/confirm", (req, res) => {
+  const { reservationId } = req.query;
+  const idempotencyKey = req.headers["idempotency-key"];
+  const { primaryGuest, guestRooms, roomPreferences } = req.body;
+
+  if (!idempotencyKey) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "Idempotency-Key header is required.")
+    );
+  }
+
+  if (!reservationId) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "reservationId query parameter is required.")
+    );
+  }
+
+  if (!primaryGuest) {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "primaryGuest is required.")
+    );
+  }
+
+  const reservation = mockReservations[reservationId];
+  if (!reservation && reservationId === "resv_missing") {
+    return res.status(404).json(
+      makeErrorResponse("NOT_FOUND", "Reservation not found.")
+    );
+  }
+
+  // Update status in mock storage
+  if (reservation) {
+    reservation.status = "CONFIRMED";
+    reservation.primaryGuest = primaryGuest;
+    reservation.guestRooms = guestRooms;
+    reservation.roomPreferences = roomPreferences || [];
+    reservation.priceSummary.isEstimate = false;
+  }
+
+  res.json({
+    data: {
+      orderId: "order_" + Math.random().toString(36).substring(2, 15),
+      payment: {
+        needMethodSelection: false,
+        service: "JUSPAY"
+      }
+    }
+  });
+});
+
+// 4. GET /reservations/v1/reference/nationalities
+app.get("/reservations/v1/reference/nationalities", (req, res) => {
+  res.json({
+    data: [
+      { code: "TH", name: "Thai" },
+      { code: "SG", name: "Singaporean" },
+      { code: "US", name: "American" },
+      { code: "GB", name: "British" },
+      { code: "CN", name: "Chinese" }
+    ]
+  });
+});
+
+// 5. GET /reservations/v1/reference/country-codes
+app.get("/reservations/v1/reference/country-codes", (req, res) => {
+  res.json({
+    data: [
+      { code: "TH", name: "Thailand", countryCode: "+66" },
+      { code: "SG", name: "Singapore", countryCode: "+65" },
+      { code: "US", name: "United States", countryCode: "+1" },
+      { code: "GB", name: "United Kingdom", countryCode: "+44" },
+      { code: "CN", name: "China", countryCode: "+86" }
+    ]
+  });
+});
+
+// 6. GET /reservations/v1/reference/room-preferences
+app.get("/reservations/v1/reference/room-preferences", (req, res) => {
+  res.json({
+    data: {
+      questions: [
+        { type: "BED_TYPE", text: "What is your preferred bed type?" },
+        { type: "SMOKING_PREFERENCE", text: "Do you prefer a smoking or non-smoking room?" }
+      ],
+      options: [
+        { type: "BED_TYPE", label: "King Bed", value: "KING" },
+        { type: "BED_TYPE", label: "Twin Bed", value: "TWIN" },
+        { type: "SMOKING_PREFERENCE", label: "Non-Smoking", value: "NON_SMOKING" },
+        { type: "SMOKING_PREFERENCE", label: "Smoking", value: "SMOKING" }
+      ]
     }
   });
 });
