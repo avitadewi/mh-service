@@ -155,6 +155,45 @@ function makeErrorResponse(code, message, traceId = "mock-trace-id") {
   };
 }
 
+// Helper to format tags into [{label, value}] format
+function formatTag(tagCode) {
+  const customLabels = {
+    "WELLNESS": "Wellness",
+    "FAMILY": "Family",
+    "PET_FRIENDLY": "Pet Friendly",
+    "CITY": "City",
+    "SKYLINE_POOL": "Skyline Pool",
+    "DINING": "Dining",
+    "BEACHFRONT": "Beachfront",
+    "LUXURY": "Luxury",
+    "HONEYMOON": "Honeymoon",
+    "NATURE": "Nature",
+    "ADVENTURE": "Adventure",
+    "ECO_FRIENDLY": "Eco-Friendly",
+    "BUSINESS": "Business",
+    "CONFERENCE": "Conference",
+    "SPA": "Spa"
+  };
+
+  const codeUpper = String(tagCode).toUpperCase();
+  if (customLabels[codeUpper]) {
+    return {
+      label: customLabels[codeUpper],
+      value: codeUpper
+    };
+  }
+
+  const formattedLabel = codeUpper
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+  return {
+    label: formattedLabel,
+    value: tagCode
+  };
+}
+
 // Helper to format property details matching PropertyAddress and location requirements
 function formatPropertyDetail(prop) {
   if (!prop) return null;
@@ -170,6 +209,9 @@ function formatPropertyDetail(prop) {
         fullAddress: addr.fullAddress
       };
     }
+  }
+  if (clone.tags && Array.isArray(clone.tags)) {
+    clone.tags = clone.tags.map(formatTag);
   }
   return clone;
 }
@@ -337,17 +379,6 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     );
   }
 
-  // Parse pagination parameters (hardcoded default limit of 10 as requested)
-  const limit = 10;
-  let page = 1;
-  if (nextCursor) {
-    const match = nextCursor.match(/cursor-page-(\d+)/);
-    if (match) {
-      page = parseInt(match[1], 10);
-    }
-  }
-  const offset = (page - 1) * limit;
-
   // Convert catalog to property-list array with list-specific formats
   let results = Object.values(propertyCatalog).map(prop => {
     // Generate standard pricePerNight dynamically based on catalog or default to a reasonable value
@@ -371,7 +402,7 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
       cityName: prop.cityName,
       locationName: prop.locationName || prop.cityName,
       countryCode: prop.countryCode || "TH",
-      tags: prop.tags,
+      tags: Array.isArray(prop.tags) ? prop.tags.map(formatTag) : [],
       tripadvisorReviewScore: prop.tripadvisorReviewScore,
       hotelStars: prop.hotelStars,
       brandIcon: prop.brandIcon,
@@ -420,19 +451,11 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     results.sort((a, b) => b.tripadvisorReviewScore - a.tripadvisorReviewScore);
   }
 
-  // Apply slice-based pagination with page name format cursor
-  const totalResults = results.length;
-  const paginatedProperties = results.slice(offset, offset + limit);
-  const hasMore = (offset + limit) < totalResults;
-  const nextCursorValue = hasMore ? `cursor-page-${page + 1}` : null;
-
+  // Return all results without pagination
   res.json({
     data: {
-      total: totalResults,
-      pagination: {
-        nextCursor: nextCursorValue
-      },
-      properties: paginatedProperties
+      total: results.length,
+      properties: results
     }
   });
 });
