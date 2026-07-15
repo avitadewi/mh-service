@@ -6,7 +6,7 @@ info:
     Health probes, create-reservation, get-reservation, and confirm-reservation
     contracts for the CCH reservation-service. codeForReservation aligns with
     content-service RateCodeForReservation. Get returns booking detail and price
-    summary by reservationId query parameter. Confirm (PATCH) accepts primary
+    summary by reservationId path parameter. Confirm (PATCH) accepts primary
     guest + room preferences and returns an order handle and payment routing.
 servers:
   - url: http://localhost:8080
@@ -60,9 +60,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /reservations/v1/reservations:
+  /reservations/v1/reservations/{reservationId}:
     parameters:
       - $ref: '#/components/parameters/LegacyRequestId'
+      - name: reservationId
+        in: path
+        required: true
+        description: Opaque CCH reservation identifier from create-reservation.
+        schema:
+          type: string
+          minLength: 1
+        example: resv_01HXYZexample
     get:
       operationId: getReservation
       summary: Get a reservation
@@ -71,18 +79,10 @@ paths:
         reservationId. Used when the guest opens or refreshes the booking page.
 
         Validation:
-        - reservationId query parameter is required and must be non-blank.
+        - reservationId path parameter is required and must be non-blank.
         - Unknown reservationId returns 404 NOT_FOUND (runtime in phase 2+).
       tags: [Reservations]
       parameters:
-        - name: reservationId
-          in: query
-          required: true
-          description: Opaque CCH reservation identifier from create-reservation.
-          schema:
-            type: string
-            minLength: 1
-          example: resv_01HXYZexample
         - $ref: "#/components/parameters/CorrelationId"
       responses:
         "200":
@@ -101,6 +101,8 @@ paths:
                     data:
                       status: PENDING
                       property:
+                        propertyCode: AN.TH-004
+                        propertyId: AN-TH-004
                         name: Anantara Koh Yao Yai Resort & Villas
                         location:
                           address:
@@ -148,6 +150,8 @@ paths:
                     data:
                       status: CONFIRMED
                       property:
+                        propertyCode: AN.TH-004
+                        propertyId: AN-TH-004
                         name: Anantara Koh Yao Yai Resort & Villas
                         location:
                           address:
@@ -205,6 +209,8 @@ paths:
                     data:
                       status: FINISHED
                       property:
+                        propertyCode: AN.TH-004
+                        propertyId: AN-TH-004
                         name: Anantara Koh Yao Yai Resort & Villas
                         location:
                           address:
@@ -270,7 +276,7 @@ paths:
                   value:
                     error:
                       code: INVALID_REQUEST
-                      message: reservationId query parameter is required.
+                      message: reservationId path parameter is required.
                       traceId: req_example_trace
         "404":
           headers:
@@ -297,6 +303,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /reservations/v1/reservations:
+    parameters:
+      - $ref: '#/components/parameters/LegacyRequestId'
     post:
       operationId: createReservation
       summary: Create a reservation
@@ -421,7 +430,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /reservations/v1/reservations/confirm:
+  /reservations/v1/reservations/{reservationId}/confirm:
+    parameters:
+      - name: reservationId
+        in: path
+        required: true
+        description: Opaque CCH reservation identifier from create-reservation.
+        schema:
+          type: string
+          minLength: 1
+        example: resv_01HXYZexample
     patch:
       operationId: confirmReservation
       summary: Confirm a reservation
@@ -433,19 +451,11 @@ paths:
 
         Validation (enforced at runtime; documented here because OpenAPI schema
         cannot express all cross-field rules):
-        - reservationId query parameter is required and must be non-blank.
+        - reservationId path parameter is required and must be non-blank.
         - Idempotency-Key header is required (16–128 characters); reuse on retry.
         - Unknown reservationId returns 404 NOT_FOUND (runtime in phase 2+).
       tags: [Reservations]
       parameters:
-        - name: reservationId
-          in: query
-          required: true
-          description: Opaque CCH reservation identifier from create-reservation.
-          schema:
-            type: string
-            minLength: 1
-          example: resv_01HXYZexample
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/CorrelationId"
       requestBody:
@@ -526,7 +536,7 @@ paths:
                   value:
                     error:
                       code: INVALID_REQUEST
-                      message: reservationId query parameter is required.
+                      message: reservationId path parameter is required.
                       traceId: req_example_trace
                 invalidBody:
                   value:
@@ -565,6 +575,74 @@ paths:
                     error:
                       code: IDEMPOTENCY_CONFLICT
                       message: The idempotency key cannot be used for this request.
+                      traceId: req_example_trace
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /reservations/v1/reservations/{reservationId}/cancel:
+    parameters:
+      - name: reservationId
+        in: path
+        required: true
+        description: Opaque CCH reservation identifier from create-reservation.
+        schema:
+          type: string
+          minLength: 1
+        example: resv_01HXYZexample
+    post:
+      operationId: cancelReservation
+      summary: Cancel a reservation
+      description: >
+        Cancels a reservation identified by reservationId. Modeled as POST
+        because cancel is a side-effecting action on an existing reservation.
+
+        Validation (enforced at runtime; documented here because OpenAPI schema
+        cannot express all cross-field rules):
+        - reservationId path parameter is required and must be non-blank.
+        - Unknown reservationId returns 404 NOT_FOUND.
+      tags: [Reservations]
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Reservation successfully cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelReservationResponse"
+              examples:
+                cancelled:
+                  summary: Reservation cancelled successfully
+                  value:
+                    data: {}
+        "400":
+          description: Invalid request (missing reservationId or invalid input)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingReservationId:
+                  value:
+                    error:
+                      code: INVALID_REQUEST
+                      message: reservationId path parameter is required.
+                      traceId: req_example_trace
+        "404":
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  value:
+                    error:
+                      code: NOT_FOUND
+                      message: Reservation not found.
                       traceId: req_example_trace
         "500":
           description: Internal server error
@@ -860,8 +938,16 @@ components:
     ReservationProperty:
       type: object
       additionalProperties: false
-      required: [name, location]
+      required: [propertyCode, propertyId, name, location]
       properties:
+        propertyCode:
+          type: string
+          description: Internal unique code for the hotel/property.
+          example: AN.TH-004
+        propertyId:
+          type: string
+          description: Unique string identifier for the property (previously hyphenated propertyCode format).
+          example: AN-TH-004
         name:
           type: string
           description: Display name of the hotel/property.
@@ -1143,6 +1229,15 @@ components:
           type: string
           description: Payment service the client must use next.
           enum: [JUSPAY, PCI_BUBBLE]
+    CancelReservationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/CancelReservationData"
+    CancelReservationData:
+      type: object
+      additionalProperties: false
     GetNationalitiesResponse:
       type: object
       required: [data]
@@ -1213,7 +1308,7 @@ components:
             $ref: "#/components/schemas/RoomPreferenceOption"
     RoomPreferenceQuestion:
       type: object
-      required: [type, text]
+      required: [type, text, multiple]
       additionalProperties: false
       properties:
         type:
@@ -1224,6 +1319,10 @@ components:
           type: string
           example: What is your preferred bed type?
           description: Question text to display.
+        multiple:
+          type: boolean
+          example: false
+          description: Whether multiple options can be selected for this question.
     RoomPreferenceOption:
       type: object
       required: [type, label, value]

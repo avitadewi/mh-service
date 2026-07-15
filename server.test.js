@@ -152,21 +152,22 @@ describe("Minor Hotels Mock API Tests", () => {
     });
   });
 
-  describe("Property Details by Code", () => {
-    it("should return details for an existing property code", async () => {
+  describe("Property Details by ID", () => {
+    it("should return details for an existing property ID", async () => {
       const res = await request(app).get("/content/v1/properties/AN-TH-004");
       expect(res.status).toBe(200);
-      expect(res.body.data.property.propertyCode).toBe("AN-TH-004");
+      expect(res.body.data.property.propertyCode).toBe("AN.TH-004");
+      expect(res.body.data.property.propertyId).toBe("AN-TH-004");
       expect(res.body.data.property.title).toBe("Anantara Koh Yao Yai Resort & Villas");
       expect(res.body.data.property.rooms.length).toBeGreaterThan(0);
       expect(res.body.data.property.tags).toEqual([
-        { label: "Wellness", value: "WELLNESS" },
-        { label: "Family", value: "FAMILY" },
-        { label: "Pet Friendly", value: "PET_FRIENDLY" }
+        { label: "WELLNESS", value: "wellness" },
+        { label: "FAMILY", value: "family" },
+        { label: "PET_FRIENDLY", value: "pet_friendly" }
       ]);
     });
 
-    it("should return 404 for a non-existent property code", async () => {
+    it("should return 404 for a non-existent property ID", async () => {
       const res = await request(app).get("/content/v1/properties/NON-EXISTENT");
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe("NOT_FOUND");
@@ -331,19 +332,24 @@ describe("Minor Hotels Mock API Tests", () => {
       const res = await request(app).get("/reservations/v1/reservations");
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe("INVALID_REQUEST");
+      expect(res.body.error.message).toBe("reservationId path parameter is required.");
     });
 
     it("should return pending reservation by reservationId", async () => {
-      const res = await request(app).get("/reservations/v1/reservations?reservationId=resv_pending");
+      const res = await request(app).get("/reservations/v1/reservations/resv_pending");
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe("PENDING");
+      expect(res.body.data.property.propertyCode).toBe("AN.TH-004");
+      expect(res.body.data.property.propertyId).toBe("AN-TH-004");
       expect(res.body.data.priceSummary.isEstimate).toBe(true);
     });
 
     it("should return confirmed reservation by reservationId", async () => {
-      const res = await request(app).get("/reservations/v1/reservations?reservationId=resv_confirmed");
+      const res = await request(app).get("/reservations/v1/reservations/resv_confirmed");
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe("CONFIRMED");
+      expect(res.body.data.property.propertyCode).toBe("AN.TH-004");
+      expect(res.body.data.property.propertyId).toBe("AN-TH-004");
       expect(res.body.data.primaryGuest.firstName).toBe("Ada");
       expect(res.body.data.priceSummary.isEstimate).toBe(false);
     });
@@ -367,6 +373,7 @@ describe("Minor Hotels Mock API Tests", () => {
       const res = await request(app).get("/reservations/v1/reference/room-preferences");
       expect(res.status).toBe(200);
       expect(res.body.data.questions).toBeDefined();
+      expect(res.body.data.questions[0].multiple).toBe(false);
       expect(res.body.data.options).toBeDefined();
     });
 
@@ -398,7 +405,7 @@ describe("Minor Hotels Mock API Tests", () => {
 
     it("should support confirming a reservation", async () => {
       const res = await request(app)
-        .patch("/reservations/v1/reservations/confirm?reservationId=resv_pending")
+        .patch("/reservations/v1/reservations/resv_pending/confirm")
         .set("Idempotency-Key", "idempotency_key_test_456")
         .send({
           primaryGuest: {
@@ -424,10 +431,22 @@ describe("Minor Hotels Mock API Tests", () => {
       expect(res.body.data.payment.service).toBe("JUSPAY");
 
       // Verify that getting the reservation now returns its updated status
-      const getRes = await request(app).get("/reservations/v1/reservations?reservationId=resv_pending");
+      const getRes = await request(app).get("/reservations/v1/reservations/resv_pending");
       expect(getRes.status).toBe(200);
       expect(getRes.body.data.status).toBe("CONFIRMED");
       expect(getRes.body.data.primaryGuest.firstName).toBe("John");
+    });
+
+    it("should support canceling a reservation", async () => {
+      const res = await request(app)
+        .post("/reservations/v1/reservations/resv_confirmed/cancel");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({});
+
+      // Verify that getting the reservation now returns its updated status as CANCELLED
+      const getRes = await request(app).get("/reservations/v1/reservations/resv_confirmed");
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.data.status).toBe("CANCELLED");
     });
   });
 });

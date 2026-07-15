@@ -157,40 +157,11 @@ function makeErrorResponse(code, message, traceId = "mock-trace-id") {
 
 // Helper to format tags into [{label, value}] format
 function formatTag(tagCode) {
-  const customLabels = {
-    "WELLNESS": "Wellness",
-    "FAMILY": "Family",
-    "PET_FRIENDLY": "Pet Friendly",
-    "CITY": "City",
-    "SKYLINE_POOL": "Skyline Pool",
-    "DINING": "Dining",
-    "BEACHFRONT": "Beachfront",
-    "LUXURY": "Luxury",
-    "HONEYMOON": "Honeymoon",
-    "NATURE": "Nature",
-    "ADVENTURE": "Adventure",
-    "ECO_FRIENDLY": "Eco-Friendly",
-    "BUSINESS": "Business",
-    "CONFERENCE": "Conference",
-    "SPA": "Spa"
-  };
-
   const codeUpper = String(tagCode).toUpperCase();
-  if (customLabels[codeUpper]) {
-    return {
-      label: customLabels[codeUpper],
-      value: codeUpper
-    };
-  }
-
-  const formattedLabel = codeUpper
-    .split("_")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-
+  const codeLower = String(tagCode).toLowerCase();
   return {
-    label: formattedLabel,
-    value: tagCode
+    label: codeUpper,
+    value: codeLower
   };
 }
 
@@ -398,6 +369,7 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
     return {
       searchId: prop.searchId,
       propertyCode: prop.propertyCode,
+      propertyId: prop.propertyId,
       title: prop.title,
       cityName: prop.cityName,
       locationName: prop.locationName || prop.cityName,
@@ -460,21 +432,23 @@ app.get("/content/v1/properties/property-list-search", (req, res) => {
   });
 });
 
-// 12. GET /content/v1/properties/:propertyCode
-app.get("/content/v1/properties/:propertyCode", (req, res) => {
-  const propertyCode = req.params.propertyCode;
+// 12. GET /content/v1/properties/:propertyId
+app.get("/content/v1/properties/:propertyId", (req, res) => {
+  const propertyId = req.params.propertyId;
 
-  if (!propertyCode || propertyCode.trim() === "") {
+  if (!propertyId || propertyId.trim() === "") {
     return res.status(400).json(
-      makeErrorResponse("BAD_REQUEST", "Property code path parameter is required.")
+      makeErrorResponse("BAD_REQUEST", "Property ID path parameter is required.")
     );
   }
 
-  const property = propertyCatalog[propertyCode];
+  // Normalize lookups to support both formats
+  const lookupKey = propertyId.replace(".", "-");
+  const property = propertyCatalog[lookupKey];
 
   if (!property) {
     return res.status(404).json(
-      makeErrorResponse("NOT_FOUND", `Property with code '${propertyCode}' was not found. Try 'AN-TH-004' or 'AV-TH-001'.`)
+      makeErrorResponse("NOT_FOUND", `Property with ID '${propertyId}' was not found. Try 'AN-TH-004' or 'AV-TH-001'.`)
     );
   }
 
@@ -680,6 +654,8 @@ const mockReservations = {
   "resv_pending": {
     status: "PENDING",
     property: {
+      propertyCode: "AN.TH-004",
+      propertyId: "AN-TH-004",
       name: "Anantara Koh Yao Yai Resort & Villas",
       location: {
         address: {
@@ -733,6 +709,8 @@ const mockReservations = {
   "resv_confirmed": {
     status: "CONFIRMED",
     property: {
+      propertyCode: "AN.TH-004",
+      propertyId: "AN-TH-004",
       name: "Anantara Koh Yao Yai Resort & Villas",
       location: {
         address: {
@@ -800,13 +778,20 @@ const mockReservations = {
   }
 };
 
-// 1. GET /reservations/v1/reservations
+// 1. GET /reservations/v1/reservations (fallback for missing parameter)
 app.get("/reservations/v1/reservations", (req, res) => {
-  const { reservationId } = req.query;
+  return res.status(400).json(
+    makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
+  );
+});
+
+// GET /reservations/v1/reservations/:reservationId
+app.get("/reservations/v1/reservations/:reservationId", (req, res) => {
+  const { reservationId } = req.params;
 
   if (!reservationId || reservationId.trim() === "") {
     return res.status(400).json(
-      makeErrorResponse("INVALID_REQUEST", "reservationId query parameter is required.")
+      makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
     );
   }
 
@@ -819,6 +804,8 @@ app.get("/reservations/v1/reservations", (req, res) => {
         data: {
           status: "PENDING",
           property: {
+            propertyCode: "AN.TH-004",
+            propertyId: "AN-TH-004",
             name: "Anantara Koh Yao Yai Resort & Villas",
             location: {
               address: {
@@ -899,24 +886,33 @@ app.post("/reservations/v1/reservations", (req, res) => {
     }
   }
 
+  // Resolve actual property from propertyCatalog
+  const reqPropertyCode = codeForReservation.propertyCode || "AN-TH-004";
+  const lookupKey = reqPropertyCode.replace(".", "-");
+  const prop = propertyCatalog[lookupKey] || propertyCatalog["AN-TH-004"];
+  const baseRoom = prop.rooms?.[0] || {};
+  const price = (baseRoom.fromPrice?.amount || 15000);
+
   const reservationId = "resv_" + Math.random().toString(36).substring(2, 15);
   
   // Store dynamically
   mockReservations[reservationId] = {
     status: "PENDING",
     property: {
-      name: "Anantara Koh Yao Yai Resort & Villas",
+      propertyCode: prop.propertyCode,
+      propertyId: prop.propertyId,
+      name: prop.title,
       location: {
         address: {
-          fullAddress: "101/2 Moo 7, Koh Yao Yai, Koh Yao, Phang Nga, 82160, Thailand"
+          fullAddress: prop.location?.address?.fullAddress || `${prop.location?.address?.addressLine1 || ""}, ${prop.location?.address?.city || ""}, ${prop.location?.address?.province || ""}, ${prop.location?.address?.postalCode || ""}, ${prop.location?.address?.countryCode || ""}`.replace(/^,\s*/, "").replace(/,\s*$/, "")
         },
-        coordinates: { latitude: 8.012543, longitude: 98.591244 }
+        coordinates: prop.location?.coordinates || { latitude: 8.012543, longitude: 98.591244 }
       }
     },
     room: {
-      name: "Deluxe Pool Villa",
+      name: baseRoom.roomName || "Deluxe Pool Villa",
       quantity: rooms.length,
-      amount: 15000 * rooms.length,
+      amount: price * rooms.length,
       nights: 1,
       adults: rooms[0].adultsCount || 2,
       children: rooms[0].childrenCount || 0,
@@ -928,7 +924,7 @@ app.post("/reservations/v1/reservations", (req, res) => {
     primaryGuest: null,
     priceSummary: {
       currency: "THB",
-      total: 15000 * rooms.length,
+      total: price * rooms.length,
       isEstimate: true
     }
   };
@@ -940,9 +936,15 @@ app.post("/reservations/v1/reservations", (req, res) => {
   });
 });
 
-// 3. PATCH /reservations/v1/reservations/confirm
+// 3. PATCH /reservations/v1/reservations/confirm (fallback for missing parameter)
 app.patch("/reservations/v1/reservations/confirm", (req, res) => {
-  const { reservationId } = req.query;
+  return res.status(400).json(
+    makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
+  );
+});
+
+app.patch("/reservations/v1/reservations/:reservationId/confirm", (req, res) => {
+  const { reservationId } = req.params;
   const idempotencyKey = req.headers["idempotency-key"];
   const { primaryGuest, guestRooms, roomPreferences } = req.body;
 
@@ -952,9 +954,9 @@ app.patch("/reservations/v1/reservations/confirm", (req, res) => {
     );
   }
 
-  if (!reservationId) {
+  if (!reservationId || reservationId.trim() === "") {
     return res.status(400).json(
-      makeErrorResponse("INVALID_REQUEST", "reservationId query parameter is required.")
+      makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
     );
   }
 
@@ -991,6 +993,40 @@ app.patch("/reservations/v1/reservations/confirm", (req, res) => {
   });
 });
 
+// POST /reservations/v1/reservations/cancel (fallback for missing parameter)
+app.post("/reservations/v1/reservations/cancel", (req, res) => {
+  return res.status(400).json(
+    makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
+  );
+});
+
+// POST /reservations/v1/reservations/:reservationId/cancel
+app.post("/reservations/v1/reservations/:reservationId/cancel", (req, res) => {
+  const { reservationId } = req.params;
+
+  if (!reservationId || reservationId.trim() === "") {
+    return res.status(400).json(
+      makeErrorResponse("INVALID_REQUEST", "reservationId path parameter is required.")
+    );
+  }
+
+  const reservation = mockReservations[reservationId];
+
+  if (!reservation && !reservationId.startsWith("resv_")) {
+    return res.status(404).json(
+      makeErrorResponse("NOT_FOUND", "Reservation not found.")
+    );
+  }
+
+  if (reservation) {
+    reservation.status = "CANCELLED";
+  }
+
+  res.json({
+    data: {}
+  });
+});
+
 // 4. GET /reservations/v1/reference/nationalities
 app.get("/reservations/v1/reference/nationalities", (req, res) => {
   res.json({
@@ -1022,8 +1058,8 @@ app.get("/reservations/v1/reference/room-preferences", (req, res) => {
   res.json({
     data: {
       questions: [
-        { type: "BED_TYPE", text: "What is your preferred bed type?" },
-        { type: "SMOKING_PREFERENCE", text: "Do you prefer a smoking or non-smoking room?" }
+        { type: "BED_TYPE", text: "What is your preferred bed type?", multiple: false },
+        { type: "SMOKING_PREFERENCE", text: "Do you prefer a smoking or non-smoking room?", multiple: false }
       ],
       options: [
         { type: "BED_TYPE", label: "King Bed", value: "KING" },

@@ -437,7 +437,8 @@ const destinations = [
 const propertyCatalog = {
   "AN-TH-004": {
     searchId: "property-AN-TH-004",
-    propertyCode: "AN-TH-004",
+    propertyCode: "AN.TH-004",
+    propertyId: "AN-TH-004",
     propertyBackCode: "AN-TH-DD-004",
     title: "Anantara Koh Yao Yai Resort & Villas",
     cityName: "Phuket",
@@ -533,7 +534,8 @@ const propertyCatalog = {
   },
   "AV-TH-001": {
     searchId: "property-AV-TH-001",
-    propertyCode: "AV-TH-001",
+    propertyCode: "AV.TH-001",
+    propertyId: "AV-TH-001",
     propertyBackCode: "AV-TH-DD-001",
     title: "Avani+ Riverside Bangkok Hotel",
     cityName: "Bangkok",
@@ -667,9 +669,10 @@ while (Object.keys(propertyCatalog).length < 50) {
   
   // Format id like AN-TH-102
   const codeNum = String(100 + generatedIndex).slice(1);
-  const propertyCode = `${brand.code}-${loc.countryCode}-${codeNum}`;
+  const propertyId = `${brand.code}-${loc.countryCode}-${codeNum}`;
+  const propertyCode = `${brand.code}.${loc.countryCode}-${codeNum}`;
   
-  if (propertyCatalog[propertyCode]) {
+  if (propertyCatalog[propertyId]) {
     generatedIndex++;
     continue;
   }
@@ -680,9 +683,10 @@ while (Object.keys(propertyCatalog).length < 50) {
   const stars = 4 + (generatedIndex % 2);
   const basePrice = 3500 + (generatedIndex * 410) % 18000;
 
-  propertyCatalog[propertyCode] = {
-    searchId: `property-${propertyCode}`,
+  propertyCatalog[propertyId] = {
+    searchId: `property-${propertyId}`,
     propertyCode: propertyCode,
+    propertyId: propertyId,
     propertyBackCode: `${brand.code}-${loc.countryCode}-DD-${codeNum}`,
     title: title,
     cityName: loc.city,
@@ -703,7 +707,7 @@ while (Object.keys(propertyCatalog).length < 50) {
         { id: "img-1", url: `https://picsum.photos/800/600?random=${generatedIndex}_gal1`, thumbnailUrl: `https://picsum.photos/400/300?random=${generatedIndex}_gal1_t`, altText: "Exterior view", sortOrder: 1 },
         { id: "img-2", url: `https://picsum.photos/800/600?random=${generatedIndex}_gal2`, thumbnailUrl: `https://picsum.photos/400/300?random=${generatedIndex}_gal2_t`, altText: "Restaurant scene", sortOrder: 2 }
       ],
-      view360Url: `https://cdn.example.com/properties/${propertyCode}/360view.html`
+      view360Url: `https://cdn.example.com/properties/${propertyId}/360view.html`
     },
     accommodationSummary: [
       { type: "ROOM", label: "Rooms", count: 120 },
@@ -762,7 +766,7 @@ while (Object.keys(propertyCatalog).length < 50) {
               {
                 ratePlanCode: "RO-FLEX",
                 rateGroupCode: "PUBLIC",
-                codeForReservation: { propertyCode: propertyCode, roomCode: `ROOM-${brand.code}-01`, ratePlanCode: "RO-FLEX", rateGroupCode: "PUBLIC" },
+                codeForReservation: { propertyCode: propertyId, roomCode: `ROOM-${brand.code}-01`, ratePlanCode: "RO-FLEX", rateGroupCode: "PUBLIC" },
                 rateName: "Standard Room Only",
                 rateDescription: "Flexible cancellation up to 24 hours.",
                 badges: ["FREE_CANCELLATION"],
@@ -784,7 +788,7 @@ while (Object.keys(propertyCatalog).length < 50) {
 // Ensure autocomplete list also holds all generated items
 const allPropertiesAutocomplete = Object.values(propertyCatalog).map(prop => {
   return {
-    id: `prop-${prop.propertyCode}`,
+    id: `prop-${prop.propertyId || prop.propertyCode}`,
     title: prop.title,
     cityName: prop.cityName,
     countryName: prop.countryCode === "TH" ? "Thailand" : locFromCode(prop.countryCode),
