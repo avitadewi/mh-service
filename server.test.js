@@ -161,9 +161,9 @@ describe("Minor Hotels Mock API Tests", () => {
       expect(res.body.data.property.title).toBe("Anantara Koh Yao Yai Resort & Villas");
       expect(res.body.data.property.rooms.length).toBeGreaterThan(0);
       expect(res.body.data.property.tags).toEqual([
-        { label: "WELLNESS", value: "wellness" },
-        { label: "FAMILY", value: "family" },
-        { label: "PET_FRIENDLY", value: "pet_friendly" }
+        { label: "Wellness", value: "WELLNESS" },
+        { label: "Family", value: "FAMILY" },
+        { label: "Pet Friendly", value: "PET_FRIENDLY" }
       ]);
     });
 

@@ -155,13 +155,32 @@ function makeErrorResponse(code, message, traceId = "mock-trace-id") {
   };
 }
 
+function toNormalCase(str) {
+  if (!str) return "";
+  return str
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // Helper to format tags into [{label, value}] format
-function formatTag(tagCode) {
-  const codeUpper = String(tagCode).toUpperCase();
-  const codeLower = String(tagCode).toLowerCase();
+function formatTag(tag) {
+  if (tag && typeof tag === "object" && tag.label && tag.value) {
+    // If the label is normal case and value is screaming case, return as-is
+    // But let's make sure that if value is lowercase we capitalize it, and label is formatted.
+    // Actually, let's normalize it to be absolutely safe:
+    const valUpper = String(tag.value).toUpperCase();
+    const lblNormal = toNormalCase(valUpper);
+    return {
+      label: lblNormal,
+      value: valUpper
+    };
+  }
+  const value = String(tag).toUpperCase();
+  const label = toNormalCase(value);
   return {
-    label: codeUpper,
-    value: codeLower
+    label,
+    value
   };
 }
 
