@@ -898,7 +898,6 @@ const propertyCatalog = {
       { type: "SUITE", label: "Suites", count: 26 },
     ],
     guestLovedFeatures: [
-      { code: "RIVERFRONT", label: "Riverfront", icon: "river" },
       { code: "ROOFTOP_POOL", label: "Rooftop infinity pool", icon: "pool" },
     ],
     amenities: {
