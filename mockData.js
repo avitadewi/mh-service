@@ -726,7 +726,6 @@ const propertyCatalog = {
       { type: "RESIDENCE", label: "Residences", count: 27 },
     ],
     guestLovedFeatures: [
-      { code: "BEACHFRONT", label: "Beachfront", icon: "beachfront" },
       { code: "PRIVATE_BEACH", label: "Private beach", icon: "private-beach" },
       { code: "PRIVATE_POOL", label: "Private pool", icon: "pool" },
     ],
